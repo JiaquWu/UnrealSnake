@@ -111,22 +111,22 @@ void AABoxRoverPawn::Tick(float DeltaTime)
 	}
 
 	// 屏幕 debug
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(
-			1,
-			0.0f,
-			FColor::Green,
-			FString::Printf(TEXT("MoveInput: %.2f"), MoveInput)
-		);
-
-		GEngine->AddOnScreenDebugMessage(
-			2,
-			0.0f,
-			FColor::Yellow,
-			FString::Printf(TEXT("TurnInput: %.2f"), TurnInput)
-		);
-	}
+	// if (GEngine)
+	// {
+	// 	GEngine->AddOnScreenDebugMessage(
+	// 		1,
+	// 		0.0f,
+	// 		FColor::Green,
+	// 		FString::Printf(TEXT("MoveInput: %.2f"), MoveInput)
+	// 	);
+	//
+	// 	GEngine->AddOnScreenDebugMessage(
+	// 		2,
+	// 		0.0f,
+	// 		FColor::Yellow,
+	// 		FString::Printf(TEXT("TurnInput: %.2f"), TurnInput)
+	// 	);
+	// }
 }
 
 // Called to bind functionality to input
@@ -139,28 +139,51 @@ void AABoxRoverPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("EnhancedInputComponent valid"));
-
-		if (IA_Move)
+		
+		if (IA_Up)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Binding IA_Move"));
-			EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AABoxRoverPawn::Move);
-			EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Completed, this, &AABoxRoverPawn::Move);
+			EnhancedInputComponent->BindAction(IA_Up, ETriggerEvent::Triggered, this, &AABoxRoverPawn::MoveUp);
+			EnhancedInputComponent->BindAction(IA_Up, ETriggerEvent::Completed, this, &AABoxRoverPawn::MoveUp);
 		}
-		else
+		
+		if (IA_Down)
 		{
-			UE_LOG(LogTemp, Error, TEXT("IA_Move is NULL"));
+			EnhancedInputComponent->BindAction(IA_Down, ETriggerEvent::Triggered, this, &AABoxRoverPawn::MoveDown);
+			EnhancedInputComponent->BindAction(IA_Down, ETriggerEvent::Completed, this, &AABoxRoverPawn::MoveDown);
 		}
-
-		if (IA_Turn)
+		
+		if (IA_Left)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Binding IA_Turn"));
-			EnhancedInputComponent->BindAction(IA_Turn, ETriggerEvent::Triggered, this, &AABoxRoverPawn::Turn);
-			EnhancedInputComponent->BindAction(IA_Turn, ETriggerEvent::Completed, this, &AABoxRoverPawn::Turn);
+			EnhancedInputComponent->BindAction(IA_Left, ETriggerEvent::Triggered, this, &AABoxRoverPawn::MoveLeft);
+			EnhancedInputComponent->BindAction(IA_Left, ETriggerEvent::Completed, this, &AABoxRoverPawn::MoveLeft);
 		}
-		else
+		
+		if (IA_Right)
 		{
-			UE_LOG(LogTemp, Error, TEXT("IA_Turn is NULL"));
+			EnhancedInputComponent->BindAction(IA_Right, ETriggerEvent::Triggered, this, &AABoxRoverPawn::MoveRight);
+			EnhancedInputComponent->BindAction(IA_Right, ETriggerEvent::Completed, this, &AABoxRoverPawn::MoveRight);
 		}
+		// if (IA_Move)
+		// {
+		// 	UE_LOG(LogTemp, Warning, TEXT("Binding IA_Move"));
+		// 	EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AABoxRoverPawn::Move);
+		// 	EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Completed, this, &AABoxRoverPawn::Move);
+		// }
+		// else
+		// {
+		// 	UE_LOG(LogTemp, Error, TEXT("IA_Move is NULL"));
+		// }
+		//
+		// if (IA_Turn)
+		// {
+		// 	UE_LOG(LogTemp, Warning, TEXT("Binding IA_Turn"));
+		// 	EnhancedInputComponent->BindAction(IA_Turn, ETriggerEvent::Triggered, this, &AABoxRoverPawn::Turn);
+		// 	EnhancedInputComponent->BindAction(IA_Turn, ETriggerEvent::Completed, this, &AABoxRoverPawn::Turn);
+		// }
+		// else
+		// {
+		// 	UE_LOG(LogTemp, Error, TEXT("IA_Turn is NULL"));
+		// }
 	}
 	else
 	{
@@ -168,15 +191,37 @@ void AABoxRoverPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	}
 }
 
-void AABoxRoverPawn::Move(const FInputActionValue& Value)
+void AABoxRoverPawn::MoveUp(const FInputActionValue& Value)
 {
-	MoveInput = Value.Get<float>();
-	UE_LOG(LogTemp, Warning, TEXT("Move called: %f"), MoveInput);
+	UE_LOG(LogTemp, Warning, TEXT("MoveUp called"));
 }
 
-void AABoxRoverPawn::Turn(const FInputActionValue& Value)
+void AABoxRoverPawn::MoveDown(const FInputActionValue& Value)
 {
-	TurnInput = Value.Get<float>();
-	UE_LOG(LogTemp, Warning, TEXT("Turn called: %f"), TurnInput);
+	UE_LOG(LogTemp, Warning, TEXT("MoveDown called"));
 }
+
+void AABoxRoverPawn::MoveRight(const FInputActionValue& Value)
+{
+	UE_LOG(LogTemp, Warning, TEXT("MoveRight called"));
+}
+
+void AABoxRoverPawn::MoveLeft(const FInputActionValue& Value)
+{
+	UE_LOG(LogTemp, Warning, TEXT("MoveLeft called"));
+}
+
+// void AABoxRoverPawn::Move(const FInputActionValue& Value)
+// {
+// 	MoveInput = Value.Get<float>();
+// 	UE_LOG(LogTemp, Warning, TEXT("Move called: %f"), MoveInput);
+// }
+//
+// void AABoxRoverPawn::Turn(const FInputActionValue& Value)
+// {
+// 	TurnInput = Value.Get<float>();
+// 	UE_LOG(LogTemp, Warning, TEXT("Turn called: %f"), TurnInput);
+// }
+
+
 

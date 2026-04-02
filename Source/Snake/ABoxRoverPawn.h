@@ -29,14 +29,25 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	void Move(const FInputActionValue& Value);
-	void Turn(const FInputActionValue& Value);
+	// void Move(const FInputActionValue& Value);
+	// void Turn(const FInputActionValue& Value);
+	
+	void MoveUp(const FInputActionValue& Value);
+	void MoveDown(const FInputActionValue& Value);
+	void MoveRight(const FInputActionValue& Value);
+	void MoveLeft(const FInputActionValue& Value);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-	UInputAction* IA_Move;
+	UInputAction* IA_Up;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-	UInputAction* IA_Turn;
+	UInputAction* IA_Down;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	UInputAction* IA_Left;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	UInputAction* IA_Right;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
