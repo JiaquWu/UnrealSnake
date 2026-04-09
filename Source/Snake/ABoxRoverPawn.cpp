@@ -26,16 +26,34 @@ AABoxRoverPawn::AABoxRoverPawn()
 	VisualMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Visual Mesh"));
 	VisualMesh->SetupAttachment(RootComponent);
 
-	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("Spring Arm"));
+	// SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("Spring Arm"));
+	// SpringArm->SetupAttachment(RootComponent);
+	
+	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(RootComponent);
+	SpringArm->TargetArmLength = 800.f;
+	SpringArm->bUsePawnControlRotation = false;
+	SpringArm->SetAbsolute(false, true, false);   // 位置不绝对，旋转绝对，缩放不绝对
+	SpringArm->bInheritPitch = false;
+	SpringArm->bInheritYaw = false;
+	SpringArm->bInheritRoll = false;
+	SpringArm->SetRelativeRotation(FRotator(-60.f, 0.f, 0.f));
+	SpringArm->bDoCollisionTest = false;
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-	Camera->SetupAttachment(SpringArm);
+	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+	Camera->bUsePawnControlRotation = false;
+	
+	bUseControllerRotationYaw = false;
 }
 
 // Called when the game starts or when spawned
 void AABoxRoverPawn::BeginPlay()
 {
+	
+	RequestedDirection = CurrentDirection;
+	UpdateDirection(CurrentDirection);	
+	
 	Super::BeginPlay();
 
 	if (APlayerController* PlayerController = GetWorld()->GetFirstPlayerController())
@@ -109,7 +127,32 @@ void AABoxRoverPawn::Tick(float DeltaTime)
 		const FRotator TurnDelta(0.0f, TurnInput * TurnSpeed * DeltaTime, 0.0f);
 		AddActorLocalRotation(TurnDelta);
 	}
+	
+	// if (bUseGridMovement)
+	// {
+	// 	// Interpolate towards the target
+	// 	TickGridMovement(DeltaTime);
+	// }
+	// else
+	// {
+	// 	HandleDirectionChange();
+	// 	TickFreeMovement(DeltaTime);
+	// }
+	HandleDirectionChange();
+	TickFreeMovement(DeltaTime);
+	
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			10, 0.f, FColor::Green,
+			FString::Printf(TEXT("SpringArm Rot: %s"), *SpringArm->GetComponentRotation().ToString())
+		);
 
+		GEngine->AddOnScreenDebugMessage(
+			11, 0.f, FColor::Yellow,
+			FString::Printf(TEXT("Camera Rot: %s"), *Camera->GetComponentRotation().ToString())
+		);
+	}
 	// 屏幕 debug
 	// if (GEngine)
 	// {
@@ -127,6 +170,73 @@ void AABoxRoverPawn::Tick(float DeltaTime)
 	// 		FString::Printf(TEXT("TurnInput: %.2f"), TurnInput)
 	// 	);
 	// }
+}
+
+void AABoxRoverPawn::UpdateDirection(ESnakeDirection NewDirection)
+{
+	switch (NewDirection)
+	{
+	case ESnakeDirection::Up:	SetActorRotation(FRotator(0.f, 0.f, 0.f));
+		break;
+	case ESnakeDirection::Down:	SetActorRotation(FRotator(0.f, 180.f, 0.f));
+		break;
+	case ESnakeDirection::Left:	SetActorRotation(FRotator(0.f, -90.f, 0.f));
+		break;
+	case ESnakeDirection::Right:SetActorRotation(FRotator(0.f, 90.f, 0.f));
+		break;
+	}
+}
+
+void AABoxRoverPawn::HandleDirectionChange()
+{
+	if (CurrentDirection != RequestedDirection && IsValidTurn(RequestedDirection))
+	{
+		CurrentDirection = RequestedDirection;
+		UpdateDirection(CurrentDirection);
+		UE_LOG(LogTemp, Warning, TEXT("Direction changed to: %s"), *UEnum::GetValueAsString(CurrentDirection));
+	}
+}
+
+bool AABoxRoverPawn::IsValidTurn(ESnakeDirection NewDirection) const
+{
+	// A turn is valid if it's not the same as the current direction, and it's not directly opposite to the current direction (e.g. if we're moving up, we can't turn down)
+	if (NewDirection == CurrentDirection)
+	{
+		return false;
+	}
+	switch (CurrentDirection)
+	{
+	case ESnakeDirection::Up:
+		return NewDirection != ESnakeDirection::Down;
+	case ESnakeDirection::Down:
+		return NewDirection != ESnakeDirection::Up;
+	case ESnakeDirection::Left:
+		return NewDirection != ESnakeDirection::Right;
+	case ESnakeDirection::Right:
+		return NewDirection != ESnakeDirection::Left;
+	default:
+		return false; // Should never happen, but we return false just in case
+	}
+}
+
+FVector AABoxRoverPawn::GetVectorFromDirection(ESnakeDirection Direction) const
+{
+	switch (Direction)
+	{
+	case ESnakeDirection::Up:     return FVector::ForwardVector;  // +X
+	case ESnakeDirection::Down:   return -FVector::ForwardVector; // -X
+	case ESnakeDirection::Left:   return -FVector::RightVector;   // -Y
+	case ESnakeDirection::Right:  return FVector::RightVector;    // +Y
+	default:                    return FVector::ZeroVector;     // Should never happen, but we return zero just in case
+	}
+}
+
+void AABoxRoverPawn::TickFreeMovement(float DeltaTime)
+{
+	// Is this going to work? 
+	FVector MovementVector = GetVectorFromDirection(CurrentDirection);
+	FVector DesiredOffset = MovementVector * MoveSpeed * DeltaTime;
+	AddActorWorldOffset(DesiredOffset, true);
 }
 
 // Called to bind functionality to input
@@ -193,22 +303,80 @@ void AABoxRoverPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 void AABoxRoverPawn::MoveUp(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Warning, TEXT("MoveUp called"));
+	//UE_LOG(LogTemp, Warning, TEXT("MoveUp called"));
+	bool bPressed = Value.Get<bool>();
+	if (bPressed)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("MoveUp called"));
+		RequestedDirection = ESnakeDirection::Up;
+	}
 }
 
 void AABoxRoverPawn::MoveDown(const FInputActionValue& Value)
 {
 	UE_LOG(LogTemp, Warning, TEXT("MoveDown called"));
+	bool bPressed = Value.Get<bool>();
+	if (bPressed)
+	{
+		RequestedDirection = ESnakeDirection::Down;
+	}
 }
 
 void AABoxRoverPawn::MoveRight(const FInputActionValue& Value)
 {
 	UE_LOG(LogTemp, Warning, TEXT("MoveRight called"));
+	bool bPressed = Value.Get<bool>();
+	if (bPressed)
+	{
+		RequestedDirection = ESnakeDirection::Right;
+	}
 }
 
 void AABoxRoverPawn::MoveLeft(const FInputActionValue& Value)
 {
 	UE_LOG(LogTemp, Warning, TEXT("MoveLeft called"));
+	bool bPressed = Value.Get<bool>();
+	if (bPressed)
+	{
+		RequestedDirection = ESnakeDirection::Left;
+	}
+}
+
+void AABoxRoverPawn::Input_TryTurnUp(const FInputActionValue& Value)
+{
+	// bool bPressed = Value.Get<bool>();
+	// if (bPressed)
+	// {
+	//
+	// 	RequestedDirection = ESnakeDirection::Up;
+	// }
+}
+
+void AABoxRoverPawn::Input_TryTurnDown(const FInputActionValue& Value)
+{
+	// bool bPressed = Value.Get<bool>();
+	// if (bPressed)
+	// {
+	// 	RequestedDirection = ESnakeDirection::Down;
+	// }
+}
+
+void AABoxRoverPawn::Input_TryTurnLeft(const FInputActionValue& Value)
+{
+	// bool bPressed = Value.Get<bool>();
+	// if (bPressed)
+	// {
+	// 	RequestedDirection = ESnakeDirection::Left;
+	// }
+}
+
+void AABoxRoverPawn::Input_TryTurnRight(const FInputActionValue& Value)
+{
+	// bool bPressed = Value.Get<bool>();
+	// if (bPressed)
+	// {
+	// 	RequestedDirection = ESnakeDirection::Right;
+	// }
 }
 
 // void AABoxRoverPawn::Move(const FInputActionValue& Value)

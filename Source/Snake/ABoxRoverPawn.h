@@ -16,6 +16,17 @@ class UInputAction;
 
 struct FInputActionValue;
 
+
+UENUM(BlueprintType)
+enum class ESnakeDirection : uint8
+{
+	Up,
+	Down,
+	Left,
+	Right
+};
+
+
 UCLASS()
 class SNAKE_API AABoxRoverPawn : public APawn
 {
@@ -36,6 +47,13 @@ protected:
 	void MoveDown(const FInputActionValue& Value);
 	void MoveRight(const FInputActionValue& Value);
 	void MoveLeft(const FInputActionValue& Value);
+	
+	void TickFreeMovement(float DeltaTime);
+	void UpdateDirection(ESnakeDirection NewDirection);
+	void HandleDirectionChange();
+	bool IsValidTurn(ESnakeDirection NewDirection) const;
+	
+	FVector GetVectorFromDirection(ESnakeDirection Direction) const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	UInputAction* IA_Up;
@@ -76,6 +94,16 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Input")
 	float TurnInput = 0.0f;
 
+private:
+	ESnakeDirection CurrentDirection = ESnakeDirection::Right;
+	ESnakeDirection RequestedDirection = ESnakeDirection::Right;
+	
+	void Input_TryTurnUp(const FInputActionValue& Value);
+	void Input_TryTurnDown(const FInputActionValue& Value);
+	void Input_TryTurnLeft(const FInputActionValue& Value);
+	void Input_TryTurnRight(const FInputActionValue& Value);
+
+	
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
