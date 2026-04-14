@@ -93,6 +93,18 @@ void AABoxRoverPawn::BeginPlay()
 	{
 		UE_LOG(LogTemp, Error, TEXT("FirstPlayerController is NULL"));
 	}
+	
+	if (Camera)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Camera bUsePawnControlRotation: %s"),
+			Camera->bUsePawnControlRotation ? TEXT("true") : TEXT("false"));
+	}
+
+	if (SpringArm)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SpringArm bUsePawnControlRotation: %s"),
+			SpringArm->bUsePawnControlRotation ? TEXT("true") : TEXT("false"));
+	}
 }
 
 // Called every frame
@@ -143,15 +155,86 @@ void AABoxRoverPawn::Tick(float DeltaTime)
 	
 	if (GEngine)
 	{
-		GEngine->AddOnScreenDebugMessage(
-			10, 0.f, FColor::Green,
-			FString::Printf(TEXT("SpringArm Rot: %s"), *SpringArm->GetComponentRotation().ToString())
-		);
+		TArray<UCameraComponent*> Cameras;
+		GetComponents<UCameraComponent>(Cameras);
 
-		GEngine->AddOnScreenDebugMessage(
-			11, 0.f, FColor::Yellow,
-			FString::Printf(TEXT("Camera Rot: %s"), *Camera->GetComponentRotation().ToString())
-		);
+		for (int32 i = 0; i < Cameras.Num(); ++i)
+		{
+			if (Cameras[i])
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Camera %d: %s Active=%s WorldRot=%s"),
+					i,
+					*Cameras[i]->GetName(),
+					Cameras[i]->IsActive() ? TEXT("true") : TEXT("false"),
+					*Cameras[i]->GetComponentRotation().ToString());
+			}
+		}
+		
+		
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			if (AActor* ViewTarget = PC->GetViewTarget())
+			{
+				GEngine->AddOnScreenDebugMessage(
+					40, 0.f, FColor::White,
+					FString::Printf(TEXT("ViewTarget: %s"), *ViewTarget->GetName())
+				);
+			}
+		}
+		
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			GEngine->AddOnScreenDebugMessage(
+				20, 0.f, FColor::White,
+				FString::Printf(TEXT("Control Rot: %s"), *PC->GetControlRotation().ToString())
+			);
+
+			if (PC->PlayerCameraManager)
+			{
+				GEngine->AddOnScreenDebugMessage(
+					21, 0.f, FColor::Silver,
+					FString::Printf(TEXT("CameraManager Rot: %s"), *PC->PlayerCameraManager->GetCameraRotation().ToString())
+				);
+			}
+			
+			if (SpringArm)
+			{
+				const FTransform SocketTransform = SpringArm->GetSocketTransform(USpringArmComponent::SocketName, RTS_World);
+
+				GEngine->AddOnScreenDebugMessage(
+					30, 0.f, FColor::Magenta,
+					FString::Printf(TEXT("SpringArm Socket Rot: %s"), *SocketTransform.GetRotation().Rotator().ToString())
+				);
+			}
+		}
+		
+		// GEngine->AddOnScreenDebugMessage(
+		// 	10, 0.f, FColor::Green,
+		// 	FString::Printf(TEXT("SpringArm World Rot: %s"), *SpringArm->GetComponentRotation().ToString())
+		// );
+		//
+		// GEngine->AddOnScreenDebugMessage(
+		// 	11, 0.f, FColor::Yellow,
+		// 	FString::Printf(TEXT("SpringArm Relative Rot: %s"), *SpringArm->GetRelativeRotation().ToString())
+		// );
+		//
+		// GEngine->AddOnScreenDebugMessage(
+		// 	12, 0.f, FColor::Cyan,
+		// 	FString::Printf(TEXT("Camera World Rot: %s"), *Camera->GetComponentRotation().ToString())
+		// );
+		//
+		// GEngine->AddOnScreenDebugMessage(
+		// 	13, 0.f, FColor::Red,
+		// 	FString::Printf(TEXT("Camera Relative Rot: %s"), *Camera->GetRelativeRotation().ToString())
+		// );
+		//
+		// if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		// {
+		// 	GEngine->AddOnScreenDebugMessage(
+		// 		20, 0.f, FColor::White,
+		// 		FString::Printf(TEXT("Control Rot: %s"), *PC->GetControlRotation().ToString())
+		// 	);
+		// }
 	}
 	// 屏幕 debug
 	// if (GEngine)
@@ -168,7 +251,7 @@ void AABoxRoverPawn::Tick(float DeltaTime)
 	// 		0.0f,
 	// 		FColor::Yellow,
 	// 		FString::Printf(TEXT("TurnInput: %.2f"), TurnInput)
-	// 	);
+	// 	); 
 	// }
 }
 
