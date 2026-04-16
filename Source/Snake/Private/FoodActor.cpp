@@ -1,0 +1,58 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "FoodActor.h"
+//#include "ABoxRoverPawn.h"
+#include "Components/SphereComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Snake/ABoxRoverPawn.h"
+
+// Sets default values
+AFoodActor::AFoodActor()
+{
+ 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	PrimaryActorTick.bCanEverTick = true;
+
+	CollisionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionSphere"));
+	RootComponent = CollisionSphere;
+	CollisionSphere->SetSphereRadius(CollisionRadius);
+	CollisionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	CollisionSphere->SetCollisionObjectType(ECC_WorldDynamic);
+	CollisionSphere->SetCollisionResponseToAllChannels(ECR_Ignore);
+	CollisionSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	CollisionSphere->SetGenerateOverlapEvents(true);
+	
+	FoodMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FoodMesh"));
+	FoodMesh->SetupAttachment(RootComponent);
+	FoodMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	FoodMesh->SetSimulatePhysics(false);
+}
+
+// Called when the game starts or when spawned
+void AFoodActor::BeginPlay()
+{
+	Super::BeginPlay();
+	CollisionSphere->OnComponentBeginOverlap.AddDynamic(this, &AFoodActor::HandleFoodOverlap);
+}
+
+// Called every frame
+void AFoodActor::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+}
+
+void AFoodActor::HandleFoodOverlap(UPrimitiveComponent* OverlapComponent, AActor* OtherActor, UPrimitiveComponent* OtherOverlapComponent, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (AABoxRoverPawn* SnakePawn = Cast<AABoxRoverPawn>(OtherActor))
+	{
+		SnakePawn->HandleFoodOverlap(this);
+	}
+	
+}
+
+void AFoodActor::SetFoodGirdPosition(const FIntPoint& Position, const FVector& NewWorldPosition)
+{
+	FoodGridPosition = Position;
+	SetActorLocation(NewWorldPosition);
+}

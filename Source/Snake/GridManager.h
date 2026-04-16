@@ -19,13 +19,19 @@ public:
 	AGridManager();
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	UInstancedStaticMeshComponent* GridVisuals;
+	UInstancedStaticMeshComponent* FloorInstances;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UStaticMesh* CellMeshAsset;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UInstancedStaticMeshComponent* WallInstances;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TObjectPtr<UMaterialInterface> CellMaterial;
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	// UStaticMesh* CellMeshAsset;
+	
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	// TObjectPtr<UMaterialInterface> CellMaterial;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<USceneComponent> SceneRoot; 
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 GridWidth;
@@ -34,11 +40,39 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 CellSize;
 	
-	FVector GetCellWorldPosition(int32 CellX, int32 CellY) const;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bGenerateFloors = true;
 	
-	bool IsCellValid(int32 CellX, int32 CellY) const;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Visual")
+	float WallZOffset = 0.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Visual")
+	float FloorZOffset = -0.5f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Visual")
+	FVector InstanceScale = FVector(1.0f, 1.0f, 1.0f);
+	
+	TSet<FIntPoint> BlockedCells;
+	
+	FVector GetCellWorldPosition(const FIntPoint& GridCell) const;
+	
+	bool IsCellValid(const FIntPoint& GridCell) const;
+	
+	bool IsBlocked(const FIntPoint& GridCell) const;
+	
+	bool TryGetRandomFreeCell(FIntPoint& OutCell, const TArray<FIntPoint>& ForbiddenCells, int32 MaxAttempts = 200) const;
+	
+	
+	
+	
 	
 	void GenerateCells();
+	
+	void GenerateBlockedCells();
+	
+	void GenerateVisualInstances();
+	
+	void ClearVisualInstances();
 
 protected:
 	// Called when the game starts or when spawned

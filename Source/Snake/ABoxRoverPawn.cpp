@@ -7,6 +7,7 @@
 #include "InputMappingContext.h"
 #include "InputAction.h"
 #include "InputActionValue.h"
+#include "Private/FoodActor.h"
 
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -474,5 +475,36 @@ void AABoxRoverPawn::Input_TryTurnRight(const FInputActionValue& Value)
 // 	UE_LOG(LogTemp, Warning, TEXT("Turn called: %f"), TurnInput);
 // }
 
+void AABoxRoverPawn::GrowSnake(int32 Growth)
+{
+	PendingGrowth += FMath::Max(Growth, 0);
+}
 
+void AABoxRoverPawn::HandleFoodOverlap(AFoodActor* FoodActor)
+{
+	if (bIsDead || !FoodActor)
+		return;
+	
+	GrowSnake(1);
+	OnFoodConsumed.Broadcast(10);
+	
+	FoodActor->SetActorLocation(FoodActor->GetActorLocation());
+}
+
+void AABoxRoverPawn::HandleFoodDeath()
+{
+	if (bIsDead)
+		return;
+	
+	bIsDead = true;
+	OnSnakeDied.Broadcast();
+}
+
+TArray<FIntPoint> AABoxRoverPawn::GetAllOccupiedGridCells() const
+{
+	TArray<FIntPoint> Occupied = CurrentBodyGridPositions;
+	Occupied.Insert(CurrentGridPosition,0);
+	
+	return  Occupied;
+}
 

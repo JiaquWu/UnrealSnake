@@ -7,12 +7,16 @@
 #include "InputActionValue.h"
 #include "ABoxRoverPawn.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFoodConsumed, int32, Score);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSnakeDied);
+
 class UInputMappingContext;
 class UStaticMeshComponent;
 class USphereComponent;
 class UCameraComponent;
 class USpringArmComponent;
 class UInputAction;
+class AFoodActor;
 
 struct FInputActionValue;
 
@@ -35,7 +39,19 @@ class SNAKE_API AABoxRoverPawn : public APawn
 public:
 	// Sets default values for this pawn's properties
 	AABoxRoverPawn();
-
+	
+	UFUNCTION()
+	void HandleFoodOverlap(AFoodActor* FoodActor);
+	
+	UFUNCTION()
+	void HandleFoodDeath();
+	
+	UPROPERTY(BlueprintAssignable, Category="Snake|Events")
+	FOnFoodConsumed OnFoodConsumed;
+	
+	UPROPERTY(BlueprintAssignable, Category="Snake|Events")
+	FOnSnakeDied OnSnakeDied;
+	
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -53,7 +69,15 @@ protected:
 	void HandleDirectionChange();
 	bool IsValidTurn(ESnakeDirection NewDirection) const;
 	
+	void GrowSnake(int32 Growth);
+	
 	FVector GetVectorFromDirection(ESnakeDirection Direction) const;
+	
+	UPROPERTY(BlueprintReadOnly, Category = Input)
+	TArray<FIntPoint> CurrentBodyGridPositions;
+	
+	UPROPERTY(BlueprintReadOnly, Category = Input)
+	TArray<FIntPoint> CurrentGridPosition;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	UInputAction* IA_Up;
@@ -94,6 +118,11 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Input")
 	float TurnInput = 0.0f;
 
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsDead = false;
+	
+	UPROPERTY(BlueprintReadOnly)
+	int32 PendingGrowth = 0;
 private:
 	ESnakeDirection CurrentDirection = ESnakeDirection::Right;
 	ESnakeDirection RequestedDirection = ESnakeDirection::Right;
@@ -111,5 +140,5 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	
+	TArray<FIntPoint> GetAllOccupiedGridCells() const;
 };
