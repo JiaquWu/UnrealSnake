@@ -44,8 +44,12 @@ void AFoodActor::Tick(float DeltaTime)
 
 void AFoodActor::HandleFoodOverlap(UPrimitiveComponent* OverlapComponent, AActor* OtherActor, UPrimitiveComponent* OtherOverlapComponent, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	if (!bIsActive) return;
+	
 	if (AABoxRoverPawn* SnakePawn = Cast<AABoxRoverPawn>(OtherActor))
 	{
+		bIsActive = false;
+		CollisionSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		SnakePawn->HandleFoodOverlap(this);
 	}
 	
@@ -55,4 +59,21 @@ void AFoodActor::SetFoodGirdPosition(const FIntPoint& Position, const FVector& N
 {
 	FoodGridPosition = Position;
 	SetActorLocation(NewWorldPosition);
+}
+
+void AFoodActor::DeactivateFood()
+{
+	bIsActive = false;
+	CollisionSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
+
+void AFoodActor::RespawnFood(const FIntPoint& NewGridPosition, const FVector& NewWorldLocation)
+{
+	FoodGridPosition = NewGridPosition;
+	SetActorLocation(NewWorldLocation, false, nullptr, ETeleportType::TeleportPhysics);
+
+	bIsActive = true;
+	CollisionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	CollisionSphere->SetGenerateOverlapEvents(true);
+	CollisionSphere->UpdateOverlaps();
 }

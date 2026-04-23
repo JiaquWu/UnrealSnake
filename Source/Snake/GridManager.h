@@ -37,6 +37,13 @@ public:
 	int32 GridWidth;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 GridHeight;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Grid")
+	FIntPoint GridDimensions = FIntPoint(GridWidth, GridHeight);
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Grid")
+	FVector GridOrigin = FVector::ZeroVector;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 CellSize;
 	

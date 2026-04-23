@@ -26,6 +26,11 @@ public:
 	UFUNCTION(BlueprintPure, Category="Food")
 	FIntPoint GetFoodGridPosition() const {return FoodGridPosition;}
 	
+	void DeactivateFood();
+	
+	UFUNCTION(BlueprintCallable, Category = "Food")
+	void RespawnFood(const FIntPoint& NewGridPosition, const FVector& NewWorldLocation);
+	
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -54,4 +59,6 @@ private:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Components", meta= (AllowPrivateAccess))
 	float CollisionRadius;
+	
+	bool bIsActive = true;
 };

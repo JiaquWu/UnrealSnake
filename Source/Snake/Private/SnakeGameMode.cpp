@@ -64,8 +64,15 @@ void ASnakeGameMode::SpawnSnake()
 		return;
 	}
 	
+	if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+	{
+		PC->Possess(SpawnedSnakePawn);
+	}
+	
 	SpawnedSnakePawn->OnFoodConsumed.AddDynamic(this, &ASnakeGameMode::HandleFoodConsumed);
 	SpawnedSnakePawn->OnSnakeDied.AddDynamic(this, &ASnakeGameMode::HandleSnakeDeath);
+	
+	
 	
 }
 
@@ -93,8 +100,7 @@ void ASnakeGameMode::MoveFoodToRandomFreeCell()
 	FIntPoint NewFoodCell;
 	if (GridManager->TryGetRandomFreeCell(NewFoodCell, ForbiddenCells))
 	{
-		SpawnedFoodActor->SetActorEnableCollision(true);
-		SpawnedFoodActor->SetFoodGirdPosition(NewFoodCell, GridManager->GetCellWorldPosition(NewFoodCell));
+		SpawnedFoodActor->RespawnFood(NewFoodCell, GridManager->GetCellWorldPosition(NewFoodCell));
 	}
 }
 
@@ -111,10 +117,13 @@ void ASnakeGameMode::HandleFoodConsumed(int32 ScoreValue)
 
 void ASnakeGameMode::HandleSnakeDeath()
 {
+	
 	if (ASnakeGameState* GS = GetSnakeGameState())
 	{
 		GS->GameState = ESnakeGameState::Outro;
 	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("GameMode HandleSnakeDeath received"));
 }
 
 void ASnakeGameMode::RetartRun()
