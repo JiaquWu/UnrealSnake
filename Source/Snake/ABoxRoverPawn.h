@@ -20,7 +20,7 @@ class UInputAction;
 class AFoodActor;
 
 struct FInputActionValue;
-
+struct FMinimalViewInfo;
 
 UENUM(BlueprintType)
 enum class ESnakeDirection : uint8
@@ -46,6 +46,8 @@ public:
 	
 	UFUNCTION()
 	void HandleSnakeDeath();
+	
+	void RequestDirection(ESnakeDirection NewDirection);
 	
 	UPROPERTY(BlueprintAssignable, Category="Snake|Events")
 	FOnFoodConsumed OnFoodConsumed;
@@ -218,5 +220,9 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	void SetMoveInterval(float NewMoveInterval);
+	
+	virtual void CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult) override;
+	
 	TArray<FIntPoint> GetAllOccupiedGridCells() const;
 };
