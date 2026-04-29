@@ -341,13 +341,34 @@ void AABoxRoverPawn::UpdateDirection(ESnakeDirection NewDirection)
 {
 	switch (NewDirection)
 	{
-	case ESnakeDirection::Up:	SetActorRotation(FRotator(0.f, 0.f, 0.f));
+	case ESnakeDirection::Up:
+		// +X
+		SetActorRotation(FRotator(0.f, 0.f, 0.f));
 		break;
-	case ESnakeDirection::Down:	SetActorRotation(FRotator(0.f, 180.f, 0.f));
+
+	case ESnakeDirection::Down:
+		// -X
+		SetActorRotation(FRotator(0.f, 180.f, 0.f));
 		break;
-	case ESnakeDirection::Left:	SetActorRotation(FRotator(0.f, -90.f, 0.f));
+
+	case ESnakeDirection::Left:
+		// -Y
+		SetActorRotation(FRotator(0.f, -90.f, 0.f));
 		break;
-	case ESnakeDirection::Right:SetActorRotation(FRotator(0.f, 90.f, 0.f));
+
+	case ESnakeDirection::Right:
+		// +Y
+		SetActorRotation(FRotator(0.f, 90.f, 0.f));
+		break;
+
+	case ESnakeDirection::VerticalUp:
+		// +Z
+		SetActorRotation(FRotator(90.f, 0.f, 0.f));
+		break;
+
+	case ESnakeDirection::VerticalDown:
+		// -Z
+		SetActorRotation(FRotator(-90.f, 0.f, 0.f));
 		break;
 	}
 }
@@ -364,23 +385,33 @@ void AABoxRoverPawn::HandleDirectionChange()
 
 bool AABoxRoverPawn::IsValidTurn(ESnakeDirection NewDirection) const
 {
-	// A turn is valid if it's not the same as the current direction, and it's not directly opposite to the current direction (e.g. if we're moving up, we can't turn down)
 	if (NewDirection == CurrentDirection)
 	{
 		return false;
 	}
+
 	switch (CurrentDirection)
 	{
 	case ESnakeDirection::Up:
 		return NewDirection != ESnakeDirection::Down;
+
 	case ESnakeDirection::Down:
 		return NewDirection != ESnakeDirection::Up;
+
 	case ESnakeDirection::Left:
 		return NewDirection != ESnakeDirection::Right;
+
 	case ESnakeDirection::Right:
 		return NewDirection != ESnakeDirection::Left;
+
+	case ESnakeDirection::VerticalUp:
+		return NewDirection != ESnakeDirection::VerticalDown;
+
+	case ESnakeDirection::VerticalDown:
+		return NewDirection != ESnakeDirection::VerticalUp;
+
 	default:
-		return false; // Should never happen, but we return false just in case
+		return false;
 	}
 }
 
@@ -441,7 +472,7 @@ void AABoxRoverPawn::StartNewMoveStep()
 {
 	HandleDirectionChange();
 
-	const FIntPoint GridOffset = DirectionToGridOffset(CurrentDirection);
+	const FIntVector GridOffset = DirectionToGridOffset(CurrentDirection);
 	PendingNextGridPosition = CurrentGridPosition + GridOffset;
 
 	if (WouldHitWall(PendingNextGridPosition) || WouldHitSelf(PendingNextGridPosition))
@@ -450,29 +481,26 @@ void AABoxRoverPawn::StartNewMoveStep()
 		return;
 	}
 
-	// Cache the START and the END for this specific step
 	PreviousBodyGridPositions = CurrentBodyGridPositions;
 	TargetBodyGridPositions.Empty(CurrentBodyGridPositions.Num());
-	
+
 	if (CurrentBodyGridPositions.Num() > 0)
 	{
-		// Segment 0's target is always the current Head position
 		TargetBodyGridPositions.Add(CurrentGridPosition);
-		
-		// Every other segment follows the previous segment's current position
+
 		for (int32 i = 1; i < CurrentBodyGridPositions.Num(); i++)
 		{
 			TargetBodyGridPositions.Add(CurrentBodyGridPositions[i - 1]);
 		}
 	}
-	
+
 	StepStartWorldLocation = GridToWorldLocation(CurrentGridPosition);
 	StepTargetWorldLocation = GridToWorldLocation(PendingNextGridPosition);
-	MoveInterpolationProgress = 0.f; // Since we're just starting to move towards the new target, we reset the interpolation progress to 0
+	MoveInterpolationProgress = 0.f;
 	bIsMovingToTarget = true;
 }
 
-FVector AABoxRoverPawn::GridToWorldLocation(const FIntPoint& GridPosition) const
+FVector AABoxRoverPawn::GridToWorldLocation(const FIntVector& GridPosition) const
 {
 	if (!GridManager)
 	{
@@ -484,14 +512,13 @@ FVector AABoxRoverPawn::GridToWorldLocation(const FIntPoint& GridPosition) const
 
 void AABoxRoverPawn::FinishMoveStep()
 {
-	// We've reached the target grid location, so we update our current grid position to the pending next grid position, and we can also update the body positions now that we've officially moved into the new cell:
-	const FIntPoint OldHeadGridPosition = CurrentGridPosition;
+	const FIntVector OldHeadGridPosition = CurrentGridPosition;
 	CurrentGridPosition = PendingNextGridPosition;
 
-	// Body follows where the head / previous segment used to be
 	if (CurrentBodyGridPositions.Num() > 0 || PendingGrowth > 0)
 	{
 		CurrentBodyGridPositions.Insert(OldHeadGridPosition, 0);
+
 		if (PendingGrowth > 0)
 		{
 			PendingGrowth--;
@@ -501,7 +528,7 @@ void AABoxRoverPawn::FinishMoveStep()
 			CurrentBodyGridPositions.RemoveAt(CurrentBodyGridPositions.Num() - 1);
 		}
 	}
-	
+
 	SetActorLocation(StepTargetWorldLocation, false);
 	UpdateBodyVisuals(1.f);
 	bIsMovingToTarget = false;
@@ -513,20 +540,22 @@ void AABoxRoverPawn::UpdateBodyVisuals(float Alpha)
 
 	for (int32 i = 0; i < BodySegmentMeshes.Num(); ++i)
 	{
-		if (!BodySegmentMeshes[i]) continue;
+		if (!BodySegmentMeshes[i])
+		{
+			continue;
+		}
 
-		// Guaranteed targets from the start of the move
-		FIntPoint StartCell = PreviousBodyGridPositions.IsValidIndex(i) ?
-		PreviousBodyGridPositions[i] : CurrentBodyGridPositions[i];
-		
-		// Target cell = where this segment should be after the current step
-		FIntPoint TargetCell = TargetBodyGridPositions.IsValidIndex(i) ?
-		TargetBodyGridPositions[i] : StartCell;
+		FIntVector StartCell = PreviousBodyGridPositions.IsValidIndex(i)
+			? PreviousBodyGridPositions[i]
+			: CurrentBodyGridPositions[i];
+
+		FIntVector TargetCell = TargetBodyGridPositions.IsValidIndex(i)
+			? TargetBodyGridPositions[i]
+			: StartCell;
 
 		const FVector StartWorldLocation = GridToWorldLocation(StartCell);
 		const FVector TargetWorldLocation = GridToWorldLocation(TargetCell);
-		
-		// This Lerp is now stable
+
 		const FVector NewWorldLocation = FMath::Lerp(StartWorldLocation, TargetWorldLocation, Alpha);
 
 		BodySegmentMeshes[i]->SetWorldLocation(NewWorldLocation);
@@ -581,20 +610,30 @@ void AABoxRoverPawn::EnsureBodySegmentMeshCount()
 }
 
 
-FIntPoint AABoxRoverPawn::DirectionToGridOffset(ESnakeDirection Direction) const
+FIntVector AABoxRoverPawn::DirectionToGridOffset(ESnakeDirection Direction) const
 {
 	switch (Direction)
 	{
-		
-		case ESnakeDirection::Up:
-		return FIntPoint(1,0);
-		case ESnakeDirection::Down:
-		return FIntPoint(-1,0);
-		case ESnakeDirection::Left:
-		return FIntPoint(0,-1);
-		case ESnakeDirection::Right:
-		return FIntPoint(0,1);
-		default:return FIntPoint(0,0);
+	case ESnakeDirection::Up:
+		return FIntVector(1, 0, 0);
+
+	case ESnakeDirection::Down:
+		return FIntVector(-1, 0, 0);
+
+	case ESnakeDirection::Left:
+		return FIntVector(0, -1, 0);
+
+	case ESnakeDirection::Right:
+		return FIntVector(0, 1, 0);
+
+	case ESnakeDirection::VerticalUp:
+		return FIntVector(0, 0, 1);
+
+	case ESnakeDirection::VerticalDown:
+		return FIntVector(0, 0, -1);
+
+	default:
+		return FIntVector::ZeroValue;
 	}
 }
 
@@ -602,21 +641,21 @@ void AABoxRoverPawn::AddInitialBodySegments(int32 NumSegments)
 {
 	CurrentBodyGridPositions.Empty();
 
-	const FIntPoint BackwardOffset = DirectionToGridOffset(CurrentDirection) * -1; // We want to add body segments in the opposite direction of the current movement, so we multiply the grid offset by -1 to get the backward offset.
-	FIntPoint NextBodyCell = CurrentGridPosition + BackwardOffset;
+	const FIntVector BackwardOffset = DirectionToGridOffset(CurrentDirection) * -1;
+	FIntVector NextBodyCell = CurrentGridPosition + BackwardOffset;
 
 	for (int32 i = 0; i < NumSegments; ++i)
 	{
 		CurrentBodyGridPositions.Add(NextBodyCell);
-		NextBodyCell += BackwardOffset; // Move the next body cell further back for the next segment
+		NextBodyCell += BackwardOffset;
 	}
 }
 
-FIntPoint AABoxRoverPawn::GetClampedStartGridPosition() const
+FIntVector AABoxRoverPawn::GetClampedStartGridPosition() const
 {
 	if (!GridManager)
 	{
-		return FIntPoint(1, 1);
+		return FIntVector(1, 1, 0);
 	}
 
 	const FVector Origin = GridManager->GridOrigin;
@@ -625,30 +664,35 @@ FIntPoint AABoxRoverPawn::GetClampedStartGridPosition() const
 	const int32 GridX = FMath::FloorToInt((WorldLocation.X - Origin.X) / CellSize);
 	const int32 GridY = FMath::FloorToInt((WorldLocation.Y - Origin.Y) / CellSize);
 
-	return FIntPoint(
+	return FIntVector(
 		FMath::Clamp(GridX, 1, GridManager->GridWidth - 2),
-		FMath::Clamp(GridY, 1, GridManager->GridHeight - 2)
+		FMath::Clamp(GridY, 1, GridManager->GridHeight - 2),
+		0
 	);
 }
 
-bool AABoxRoverPawn::WouldHitWall(const FIntPoint& NextCell) const
+bool AABoxRoverPawn::WouldHitWall(const FIntVector& NextCell) const
 {
-	if (!GridManager) return false;
-	// This assumes our border cells are walls.
-	return GridManager->IsBlocked(NextCell); // IsWallCell?
-	//return NextCell.X <= 0 || NextCell.X >= GridDimensions.X - 1
-	//	|| NextCell.Y <= 0 || NextCell.Y >= GridDimensions.Y - 1;
+	if (!GridManager)
+	{
+		return false;
+	}
+
+	if (!GridManager->IsCellValid(NextCell))
+	{
+		return true;
+	}
+
+	return GridManager->IsBlocked(NextCell);
 }
 
-bool AABoxRoverPawn::WouldHitSelf(const FIntPoint& NextCell) const
+bool AABoxRoverPawn::WouldHitSelf(const FIntVector& NextCell) const
 {
 	if (CurrentBodyGridPositions.Num() == 0)
 	{
 		return false;
 	}
 
-	// Special case:
-	// Moving into the current tail cell is allowed if the tail will move away this step.
 	const bool bTailWillStayThisStep = (PendingGrowth > 0);
 
 	for (int32 i = 0; i < CurrentBodyGridPositions.Num(); ++i)
@@ -657,7 +701,7 @@ bool AABoxRoverPawn::WouldHitSelf(const FIntPoint& NextCell) const
 		if (!bTailWillStayThisStep && bIsTail)
 		{
 			continue;
-		}  
+		}
 
 		if (CurrentBodyGridPositions[i] == NextCell)
 		{
@@ -878,12 +922,12 @@ void AABoxRoverPawn::HandleSnakeDeath()
 	
 }
 
-TArray<FIntPoint> AABoxRoverPawn::GetAllOccupiedGridCells() const
+TArray<FIntVector> AABoxRoverPawn::GetAllOccupiedGridCells() const
 {
-	TArray<FIntPoint> Occupied = CurrentBodyGridPositions;
-	Occupied.Insert(CurrentGridPosition,0);
-	
-	return  Occupied;
+	TArray<FIntVector> Occupied = CurrentBodyGridPositions;
+	Occupied.Insert(CurrentGridPosition, 0);
+
+	return Occupied;
 }
 
 void AABoxRoverPawn::ClearBodyVisuals()

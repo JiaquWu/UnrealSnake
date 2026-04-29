@@ -1,15 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "GridManager.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/RectLightComponent.h"
-#include "Input/HittestGrid.h"
 
-// Sets default values
 AGridManager::AGridManager()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
@@ -29,57 +23,67 @@ AGridManager::AGridManager()
 	GridRectLight->SetCastShadows(false);
 }
 
-// Called when the game starts or when spawned
 void AGridManager::BeginPlay()
 {
 	Super::BeginPlay();
+
+	GridDimensions = FIntVector(GridWidth, GridHeight, GridDepth);
+
 	GenerateCells();
 	GenerateVisualInstances();
 	UpdateGridLighting();
 }
 
-// Called every frame
-// void AGridManager::Tick(float DeltaTime)
-// {
-// 	Super::Tick(DeltaTime);
-//
-// }
-
-FVector AGridManager::GetCellWorldPosition(const FIntPoint& GridCell) const
+FVector AGridManager::GetCellWorldPosition(const FIntVector& GridCell) const
 {
 	const FVector OriginPosition = GetActorLocation();
+
 	const float X = GridCell.X * CellSize + OriginPosition.X + CellSize * 0.5f;
 	const float Y = GridCell.Y * CellSize + OriginPosition.Y + CellSize * 0.5f;
-	
-	FVector Result = FVector(X, Y, OriginPosition.Z);
-	return Result;
 
+	const float Z = GridCell.Z * CellSize + OriginPosition.Z;
+	
+	return FVector(X, Y, Z);
 }
 
-bool AGridManager::IsCellValid(const FIntPoint& GridCell) const
+bool AGridManager::IsCellValid(const FIntVector& GridCell) const
 {
 	return GridCell.X >= 0
-	&& GridCell.X < GridWidth 
-	&&  GridCell.Y >= 0
-	&& GridCell.Y < GridHeight;
-	
+		&& GridCell.X < GridWidth
+		&& GridCell.Y >= 0
+		&& GridCell.Y < GridHeight
+		&& GridCell.Z >= 0
+		&& GridCell.Z < GridDepth;
 }
 
-bool AGridManager::IsBlocked(const FIntPoint& GridCell) const
+bool AGridManager::IsBlocked(const FIntVector& GridCell) const
 {
 	return BlockedCells.Contains(GridCell);
 }
 
-bool AGridManager::TryGetRandomFreeCell(FIntPoint& OutCell, const TArray<FIntPoint>& ForbiddenCells, int32 MaxAttempts) const
+bool AGridManager::TryGetRandomFreeCell(FIntVector& OutCell, const TArray<FIntVector>& ForbiddenCells, int32 MaxAttempts) const
 {
-	TSet<FIntPoint> ForbiddenSet(ForbiddenCells);
+	TSet<FIntVector> ForbiddenSet(ForbiddenCells);
+
 	for (int32 i = 0; i < MaxAttempts; i++)
 	{
-		const FIntPoint CandidateCell
-		(FMath::RandRange(1, GridWidth-2), 
-		FMath::RandRange(1, GridHeight-2));
+		const FIntVector CandidateCell(
+			FMath::RandRange(1, GridWidth - 2),
+			FMath::RandRange(1, GridHeight - 2),
+			FMath::RandRange(0, GridDepth - 1)
+		);
 		
-		if (ForbiddenSet.Contains(CandidateCell) || ForbiddenCells.Contains(CandidateCell))
+		if (!IsCellValid(CandidateCell))
+		{
+			continue;
+		}
+
+		if (IsBlocked(CandidateCell))
+		{
+			continue;
+		}
+		
+		if (ForbiddenSet.Contains(CandidateCell))
 		{
 			continue;
 		}
@@ -93,32 +97,29 @@ bool AGridManager::TryGetRandomFreeCell(FIntPoint& OutCell, const TArray<FIntPoi
 
 void AGridManager::GenerateCells()
 {
-	// if (FloorInstances == nullptr || CellMeshAsset == nullptr)
-	// 	return;
-	//FloorInstances->SetStaticMesh(CellMeshAsset);
-	//FloorInstances->ClearInstances();
-	
-	// if (CellMaterial)
-	// {
-	// 	FloorInstances->SetMaterial(0, CellMaterial);
-	// }
-	
-	for (int x = 0; x < GridWidth; x++)
+	BlockedCells.Empty();
+
+	GridDimensions = FIntVector(GridWidth, GridHeight, GridDepth);
+
+	GenerateBlockedCells();
+}
+
+void AGridManager::GenerateBlockedCells()
+{
+	for (int32 Z = 0; Z < GridDepth; Z++)
 	{
-		BlockedCells.Add(FIntPoint(x,0));
-		BlockedCells.Add(FIntPoint(x,GridHeight-1));
+		for (int32 X = 0; X < GridWidth; X++)
+		{
+			BlockedCells.Add(FIntVector(X, 0, Z));
+			BlockedCells.Add(FIntVector(X, GridHeight - 1, Z));
+		}
+
+		for (int32 Y = 0; Y < GridHeight; Y++)
+		{
+			BlockedCells.Add(FIntVector(0, Y, Z));
+			BlockedCells.Add(FIntVector(GridWidth - 1, Y, Z));
+		}
 	}
-	for (int y = 0; y < GridHeight; y++)
-	{
-		BlockedCells.Add(FIntPoint(0,y));
-		BlockedCells.Add(FIntPoint(GridWidth-1,y));
-	}
-	
-	
-	
-	
-	
-	
 }
 
 void AGridManager::GenerateVisualInstances()
@@ -126,41 +127,48 @@ void AGridManager::GenerateVisualInstances()
 	ClearVisualInstances();
 
 	if (!FloorInstances || !WallInstances)
+	{
 		return;
+	}
 
 	int32 FloorCount = 0;
 	int32 WallCount = 0;
 
-	for (int32 CellX = 0; CellX < GridWidth; CellX++)
+	for (int32 CellZ = 0; CellZ < GridDepth; CellZ++)
 	{
-		for (int32 CellY = 0; CellY < GridHeight; CellY++)
+		for (int32 CellX = 0; CellX < GridWidth; CellX++)
 		{
-			const FIntPoint Cell(CellX, CellY);
-			const bool bBlocked = BlockedCells.Contains(Cell);
-			const FVector BaseWorld = GetCellWorldPosition(Cell);
+			for (int32 CellY = 0; CellY < GridHeight; CellY++)
+			{
+				const FIntVector Cell(CellX, CellY, CellZ);
+				const bool bBlocked = BlockedCells.Contains(Cell);
+				const FVector BaseWorld = GetCellWorldPosition(Cell);
 
-			if (bBlocked)
-			{
-				const FVector WallLocation = BaseWorld + FVector(0, 0, WallZOffset);
-				const FTransform WallTransform(FRotator::ZeroRotator, WallLocation, InstanceScale);
-				WallInstances->AddInstance(WallTransform);
-				WallCount++;
-			}
-			else if (bGenerateFloors)
-			{
-				const FVector FloorLocation = BaseWorld + FVector(0, 0, FloorZOffset);
-				const FTransform FloorTransform(FRotator::ZeroRotator, FloorLocation, InstanceScale);
-				FloorInstances->AddInstance(FloorTransform);
-				FloorCount++;
+				if (bBlocked)
+				{
+					const FVector WallLocation = BaseWorld + FVector(0, 0, WallZOffset);
+					const FTransform WallTransform(FRotator::ZeroRotator, WallLocation, InstanceScale);
+					WallInstances->AddInstance(WallTransform);
+					WallCount++;
+				}
+				else if (bGenerateFloors)
+				{
+					const FVector FloorLocation = BaseWorld + FVector(0, 0, FloorZOffset);
+					const FTransform FloorTransform(FRotator::ZeroRotator, FloorLocation, InstanceScale);
+					FloorInstances->AddInstance(FloorTransform);
+					FloorCount++;
+				}
 			}
 		}
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Generated floors: %d, walls: %d, blocked cells: %d"),
+	UE_LOG(LogTemp, Warning, TEXT("Generated floors: %d, walls: %d, blocked cells: %d, depth: %d"),
 		FloorCount,
 		WallCount,
-		BlockedCells.Num());
+		BlockedCells.Num(),
+		GridDepth);
 }
+
 
 void AGridManager::ClearVisualInstances()
 {
@@ -173,7 +181,6 @@ void AGridManager::ClearVisualInstances()
 	{
 		WallInstances->ClearInstances();
 	}
-	
 }
 
 void AGridManager::UpdateGridLighting()
@@ -185,21 +192,21 @@ void AGridManager::UpdateGridLighting()
 
 	const float GridWorldWidth = GridWidth * CellSize;
 	const float GridWorldHeight = GridHeight * CellSize;
+	const float GridWorldDepth = FMath::Max(1, GridDepth) * CellSize;
 
 	const FVector GridCenterLocal(
 		GridWorldWidth * 0.5f,
 		GridWorldHeight * 0.5f,
-		RectLightHeight
+		GridWorldDepth + RectLightHeight
 	);
 
 	GridRectLight->SetRelativeLocation(GridCenterLocal);
-
 	GridRectLight->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));
 
 	GridRectLight->SetSourceWidth(GridWorldWidth);
 	GridRectLight->SetSourceHeight(GridWorldHeight);
 
-	GridRectLight->SetAttenuationRadius(FMath::Max(GridWorldWidth, GridWorldHeight) * 1.5f);
+	GridRectLight->SetAttenuationRadius(FMath::Max3(GridWorldWidth, GridWorldHeight, GridWorldDepth) * 1.5f);
 	GridRectLight->SetIntensity(RectLightIntensity);
 	GridRectLight->SetCastShadows(false);
 }

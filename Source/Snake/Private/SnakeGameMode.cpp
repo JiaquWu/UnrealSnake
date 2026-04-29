@@ -208,10 +208,10 @@ void ASnakeGameMode::SpawnSnakeForPlayer(int32 PlayerIndex)
 	// 	return;
 	// }
 
-	const TArray<FIntPoint> SpawnCells =
+	const TArray<FIntVector> SpawnCells =
 	{
-		FIntPoint(4, 4),
-		FIntPoint(11, 11)
+		FIntVector(4, 4, 0),
+		FIntVector(11, 11, 0)
 	};
 
 	if (!SpawnCells.IsValidIndex(PlayerIndex))
@@ -443,7 +443,7 @@ void ASnakeGameMode::MoveFoodToRandomFreeCell()
 		return;
 	}
 	
-	TArray<FIntPoint> ForbiddenCells;
+	TArray<FIntVector> ForbiddenCells;
 
 	for (AABoxRoverPawn* Snake : SpawnedSnakePawns)
 	{
@@ -453,7 +453,7 @@ void ASnakeGameMode::MoveFoodToRandomFreeCell()
 		}
 	}
 	
-	FIntPoint NewFoodCell;
+	FIntVector NewFoodCell;
 	if (GridManager->TryGetRandomFreeCell(NewFoodCell, ForbiddenCells))
 	{
 		SpawnedFoodActor->RespawnFood(NewFoodCell, GridManager->GetCellWorldPosition(NewFoodCell));

@@ -128,6 +128,16 @@ void ASnakePlayerController::SetupInputComponent()
 	{
 		EnhancedInputComponent->BindAction(IA_Right, ETriggerEvent::Triggered, this, &ASnakePlayerController::MoveRight);
 	}
+	
+	if (IA_VerticalUp)
+	{
+		EnhancedInputComponent->BindAction(IA_VerticalUp,ETriggerEvent::Triggered, this, &ASnakePlayerController::MoveVerticalUp);
+	}
+
+	if (IA_VerticalDown)
+	{
+		EnhancedInputComponent->BindAction(IA_VerticalDown, ETriggerEvent::Triggered, this, &ASnakePlayerController::MoveVerticalDown);
+	}
 }
 
 void ASnakePlayerController::SetControlledSnake(AABoxRoverPawn* NewSnake)
@@ -212,6 +222,25 @@ void ASnakePlayerController::MoveRight(const FInputActionValue& Value)
 	ControlledSnake->RequestDirection(ESnakeDirection::Right);
 }
 
+void ASnakePlayerController::MoveVerticalUp(const FInputActionValue& Value)
+{
+	if (!Value.Get<bool>() || !ControlledSnake)
+	{
+		return;
+	}
+
+	ControlledSnake->RequestDirection(ESnakeDirection::VerticalUp);
+}
+
+void ASnakePlayerController::MoveVerticalDown(const FInputActionValue& Value)
+{
+	if (!Value.Get<bool>() || !ControlledSnake)
+	{
+		return;
+	}
+
+	ControlledSnake->RequestDirection(ESnakeDirection::VerticalDown);
+}
 
 void ASnakePlayerController::HideAllWidgets()
 {

@@ -61,6 +61,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Input")
 	TObjectPtr<UInputAction> IA_Right;
 	
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	TObjectPtr<UInputAction> IA_VerticalUp;
+
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	TObjectPtr<UInputAction> IA_VerticalDown;
+	
 	UPROPERTY(EditDefaultsOnly, Category="UI")
 	TSubclassOf<UUserWidget> HUDWidgetClass;
 	
@@ -82,4 +88,6 @@ private:
 	void MoveDown(const FInputActionValue& Value);
 	void MoveLeft(const FInputActionValue& Value);
 	void MoveRight(const FInputActionValue& Value);
+	void MoveVerticalUp(const FInputActionValue& Value);
+	void MoveVerticalDown(const FInputActionValue& Value);
 };

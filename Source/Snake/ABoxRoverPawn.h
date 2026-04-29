@@ -28,7 +28,9 @@ enum class ESnakeDirection : uint8
 	Up,
 	Down,
 	Left,
-	Right
+	Right,
+	VerticalUp,
+	VerticalDown
 };
 
 
@@ -76,8 +78,8 @@ protected:
 	void HandleDirectionChange();
 	bool IsValidTurn(ESnakeDirection NewDirection) const;
 	
-	bool WouldHitWall(const FIntPoint& NextCell) const;
-	bool WouldHitSelf(const FIntPoint& NextCell) const;
+	bool WouldHitWall(const FIntVector& NextCell) const;
+	bool WouldHitSelf(const FIntVector& NextCell) const;
 	
 	// Body system
 	void StartNewMoveStep();
@@ -89,26 +91,26 @@ protected:
 	void GrowSnake(int32 Amount = 1);
 	
 	
-	FIntPoint GetClampedStartGridPosition() const;
+	FIntVector GetClampedStartGridPosition() const;
 	FVector GetVectorFromDirection(ESnakeDirection Direction) const;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Grid", meta = (AllowPrivateAccess = "true"))
-	FIntPoint StartGridPosition = FIntPoint(10, 10);
-	
+	FIntVector StartGridPosition = FIntVector(10, 10, 0);
+
 	UPROPERTY(BlueprintReadOnly, Category = Input)
-	TArray<FIntPoint> CurrentBodyGridPositions;
-	
+	TArray<FIntVector> CurrentBodyGridPositions;
+
 	UPROPERTY(BlueprintReadOnly, Category = Input)
-	FIntPoint CurrentGridPosition;
-	
-	FIntPoint PendingNextGridPosition = FIntPoint(0, 0);
+	FIntVector CurrentGridPosition;
+
+	FIntVector PendingNextGridPosition = FIntVector::ZeroValue;
 	
 	FVector StepStartWorldLocation = FVector::ZeroVector;
 	FVector StepTargetWorldLocation = FVector::ZeroVector;
 
 	// Snapshot of body before starting a step. So body segements can smoothly follow.
-	TArray<FIntPoint> PreviousBodyGridPositions;
-	TArray<FIntPoint> TargetBodyGridPositions;
+	TArray<FIntVector> PreviousBodyGridPositions;
+	TArray<FIntVector> TargetBodyGridPositions;
 	
 	float MoveInterpolationProgress = 0.f;
 	
@@ -189,7 +191,7 @@ protected:
 	int32 PendingGrowth = 0;
 	
 	UPROPERTY(BlueprintReadOnly, Category = "Grid")
-	FIntPoint GridDimensions;
+	FIntVector GridDimensions;
 private:
 	ESnakeDirection CurrentDirection = ESnakeDirection::Right;
 	ESnakeDirection RequestedDirection = ESnakeDirection::Right;
@@ -210,9 +212,9 @@ private:
 	void Input_TryTurnLeft(const FInputActionValue& Value);
 	void Input_TryTurnRight(const FInputActionValue& Value);
 
-	FVector GridToWorldLocation(const FIntPoint& GridPosition) const;
-	
-	FIntPoint DirectionToGridOffset(ESnakeDirection CurrentDirection) const;
+	FVector GridToWorldLocation(const FIntVector& GridPosition) const;
+
+	FIntVector DirectionToGridOffset(ESnakeDirection CurrentDirection) const;
 	
 	
 	
@@ -227,5 +229,5 @@ public:
 	
 	virtual void CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult) override;
 	
-	TArray<FIntPoint> GetAllOccupiedGridCells() const;
+	TArray<FIntVector> GetAllOccupiedGridCells() const;
 };

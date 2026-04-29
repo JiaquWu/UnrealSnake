@@ -20,16 +20,14 @@ public:
 	// Sets default values for this actor's properties
 	AFoodActor();
 
-	UFUNCTION(BlueprintCallable, Category="Food")
-	void SetFoodGirdPosition(const FIntPoint& Position, const FVector& NewWorldPosition);
+	//UFUNCTION(BlueprintCallable, Category="Food")
+	//void SetFoodGirdPosition(const FIntPoint& Position, const FVector& NewWorldPosition);
 	
-	UFUNCTION(BlueprintPure, Category="Food")
-	FIntPoint GetFoodGridPosition() const {return FoodGridPosition;}
+	void SetFoodGirdPosition(const FIntVector& Position, const FVector& NewWorldPosition);
+	void RespawnFood(const FIntVector& NewGridPosition, const FVector& NewWorldLocation);
 	
 	void DeactivateFood();
 	
-	UFUNCTION(BlueprintCallable, Category = "Food")
-	void RespawnFood(const FIntPoint& NewGridPosition, const FVector& NewWorldLocation);
 	
 protected:
 	// Called when the game starts or when spawned
@@ -55,7 +53,7 @@ private:
 	TObjectPtr<UStaticMeshComponent> FoodMesh;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta= (AllowPrivateAccess))
-	FIntPoint FoodGridPosition = FIntPoint(0,0);
+	FIntVector FoodGridPosition = FIntVector::ZeroValue;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Components", meta= (AllowPrivateAccess))
 	float CollisionRadius;

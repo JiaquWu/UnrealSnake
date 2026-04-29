@@ -1,11 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "GridManager.generated.h"
-
 
 class UInstancedStaticMeshComponent;
 class URectLightComponent;
@@ -16,7 +13,6 @@ class SNAKE_API AGridManager : public AActor
 	GENERATED_BODY()
 
 public:	
-	// Sets default values for this actor's properties
 	AGridManager();
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -33,71 +29,56 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Grid|Lighting")
 	float RectLightIntensity = 500.f;
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	// UStaticMesh* CellMeshAsset;
-	
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	// TObjectPtr<UMaterialInterface> CellMaterial;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<USceneComponent> SceneRoot; 
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 GridWidth;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 GridHeight;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Grid")
+	int32 GridWidth = 16;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Grid")
+	int32 GridHeight = 16;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Grid")
+	int32 GridDepth = 1;
 	
 	UPROPERTY(BlueprintReadOnly, Category = "Grid")
-	FIntPoint GridDimensions = FIntPoint(GridWidth, GridHeight);
+	FIntVector GridDimensions = FIntVector(16, 16, 1);
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Grid")
 	FVector GridOrigin = FVector::ZeroVector;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 CellSize;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Grid")
+	int32 CellSize = 100;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Grid|Visual")
 	bool bGenerateFloors = true;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Visual")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Grid|Visual")
 	float WallZOffset = 0.0f;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Visual")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Grid|Visual")
 	float FloorZOffset = -0.5f;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, category = "Visual")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Grid|Visual")
 	FVector InstanceScale = FVector(1.0f, 1.0f, 1.0f);
 	
-	TSet<FIntPoint> BlockedCells;
+	TSet<FIntVector> BlockedCells;
 	
-	FVector GetCellWorldPosition(const FIntPoint& GridCell) const;
+	FVector GetCellWorldPosition(const FIntVector& GridCell) const;
 	
-	bool IsCellValid(const FIntPoint& GridCell) const;
+	bool IsCellValid(const FIntVector& GridCell) const;
 	
-	bool IsBlocked(const FIntPoint& GridCell) const;
+	bool IsBlocked(const FIntVector& GridCell) const;
 	
-	bool TryGetRandomFreeCell(FIntPoint& OutCell, const TArray<FIntPoint>& ForbiddenCells, int32 MaxAttempts = 200) const;
-	
-	
-	
-	
+	bool TryGetRandomFreeCell(FIntVector& OutCell, const TArray<FIntVector>& ForbiddenCells, int32 MaxAttempts = 200) const;
 	
 	void GenerateCells();
-	
 	void GenerateBlockedCells();
-	
 	void GenerateVisualInstances();
-	
 	void ClearVisualInstances();
-	
 	void UpdateGridLighting();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-public:	
-	// Called every frame
-	// virtual void Tick(float DeltaTime) override;
-
 };

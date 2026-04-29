@@ -55,7 +55,7 @@ void AFoodActor::HandleFoodOverlap(UPrimitiveComponent* OverlapComponent, AActor
 	
 }
 
-void AFoodActor::SetFoodGirdPosition(const FIntPoint& Position, const FVector& NewWorldPosition)
+void AFoodActor::SetFoodGirdPosition(const FIntVector& Position, const FVector& NewWorldPosition)
 {
 	FoodGridPosition = Position;
 	SetActorLocation(NewWorldPosition);
@@ -67,7 +67,7 @@ void AFoodActor::DeactivateFood()
 	CollisionSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
-void AFoodActor::RespawnFood(const FIntPoint& NewGridPosition, const FVector& NewWorldLocation)
+void AFoodActor::RespawnFood(const FIntVector& NewGridPosition, const FVector& NewWorldLocation)
 {
 	FoodGridPosition = NewGridPosition;
 	SetActorLocation(NewWorldLocation, false, nullptr, ETeleportType::TeleportPhysics);
