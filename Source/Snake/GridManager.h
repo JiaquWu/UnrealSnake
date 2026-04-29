@@ -8,6 +8,7 @@
 
 
 class UInstancedStaticMeshComponent;
+class URectLightComponent;
 
 UCLASS()
 class SNAKE_API AGridManager : public AActor
@@ -24,6 +25,14 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UInstancedStaticMeshComponent* WallInstances;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Grid|Lighting")
+	TObjectPtr<URectLightComponent> GridRectLight;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Grid|Lighting")
+	float RectLightHeight = 200.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Grid|Lighting")
+	float RectLightIntensity = 500.f;
 	// UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	// UStaticMesh* CellMeshAsset;
 	
@@ -80,6 +89,8 @@ public:
 	void GenerateVisualInstances();
 	
 	void ClearVisualInstances();
+	
+	void UpdateGridLighting();
 
 protected:
 	// Called when the game starts or when spawned

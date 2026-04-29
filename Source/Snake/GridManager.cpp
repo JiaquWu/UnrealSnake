@@ -3,6 +3,7 @@
 
 #include "GridManager.h"
 #include "Components/InstancedStaticMeshComponent.h"
+#include "Components/RectLightComponent.h"
 #include "Input/HittestGrid.h"
 
 // Sets default values
@@ -22,7 +23,10 @@ AGridManager::AGridManager()
 	WallInstances->SetupAttachment(RootComponent);
 	WallInstances->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	
-	
+	GridRectLight = CreateDefaultSubobject<URectLightComponent>(TEXT("GridRectLight"));
+	GridRectLight->SetupAttachment(RootComponent);
+	GridRectLight->SetIntensity(RectLightIntensity);
+	GridRectLight->SetCastShadows(false);
 }
 
 // Called when the game starts or when spawned
@@ -31,6 +35,7 @@ void AGridManager::BeginPlay()
 	Super::BeginPlay();
 	GenerateCells();
 	GenerateVisualInstances();
+	UpdateGridLighting();
 }
 
 // Called every frame
@@ -169,4 +174,32 @@ void AGridManager::ClearVisualInstances()
 		WallInstances->ClearInstances();
 	}
 	
+}
+
+void AGridManager::UpdateGridLighting()
+{
+	if (!GridRectLight)
+	{
+		return;
+	}
+
+	const float GridWorldWidth = GridWidth * CellSize;
+	const float GridWorldHeight = GridHeight * CellSize;
+
+	const FVector GridCenterLocal(
+		GridWorldWidth * 0.5f,
+		GridWorldHeight * 0.5f,
+		RectLightHeight
+	);
+
+	GridRectLight->SetRelativeLocation(GridCenterLocal);
+
+	GridRectLight->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));
+
+	GridRectLight->SetSourceWidth(GridWorldWidth);
+	GridRectLight->SetSourceHeight(GridWorldHeight);
+
+	GridRectLight->SetAttenuationRadius(FMath::Max(GridWorldWidth, GridWorldHeight) * 1.5f);
+	GridRectLight->SetIntensity(RectLightIntensity);
+	GridRectLight->SetCastShadows(false);
 }
