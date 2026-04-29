@@ -398,7 +398,8 @@ void ASnakeGameMode::AdvanceToNextStage()
 	if (!Stages.IsValidIndex(CurrentStageIndex))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("All stages completed!"));
-
+		OnAllStagesCompleted.Broadcast();
+		
 		if (ASnakeGameState* GS = GetSnakeGameState())
 		{
 			GS->SetSnakeGameState(ESnakeGameState::Outro);
@@ -414,6 +415,8 @@ void ASnakeGameMode::AdvanceToNextStage()
 		return;
 	}
 
+	OnStageAdvanced.Broadcast(CurrentStageIndex);
+	
 	StartCurrentStage();
 	MoveFoodToRandomFreeCell();
 }

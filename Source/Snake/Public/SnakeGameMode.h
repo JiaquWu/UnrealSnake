@@ -41,12 +41,21 @@ struct FSnakeStageConfig
 	int32 FoodScore = 10;
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStageAdvanced, int32, NewStageIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAllStagesCompleted);
+
 UCLASS()
 class SNAKE_API ASnakeGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
 	
 public:
+	
+	UPROPERTY(BlueprintAssignable, Category = "Snake|Events")
+	FOnStageAdvanced OnStageAdvanced;
+
+	UPROPERTY(BlueprintAssignable, Category = "Snake|Events")
+	FOnAllStagesCompleted OnAllStagesCompleted;
 	
 	ASnakeGameMode();
 	
@@ -92,8 +101,7 @@ public:
 	int32 TotalScore = 0;
 	
 	int32 LastDisplayedRemainingSeconds = -1;
-	
-	
+
 	
 private:
 	UPROPERTY(EditDefaultsOnly, Category= "Snake")

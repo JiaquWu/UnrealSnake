@@ -55,6 +55,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="Snake|Events")
 	FOnSnakeDied OnSnakeDied;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
+	bool bCanDie = true;
+	
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

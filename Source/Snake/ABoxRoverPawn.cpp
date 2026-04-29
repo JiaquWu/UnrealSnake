@@ -859,6 +859,12 @@ void AABoxRoverPawn::HandleSnakeDeath()
 	// UE_LOG(LogTemp, Warning, TEXT("HandleSnakeDeath entered on %s, bIsDead=%s"),
 	// 	*GetName(),
 	// 	bIsDead ? TEXT("true") : TEXT("false"));
+	
+	if (!bCanDie)
+	{
+		return;
+	}
+	
 	if (bIsDead)
 		return;
 	
