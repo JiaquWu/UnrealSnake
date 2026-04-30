@@ -99,6 +99,22 @@ int32 ASnakeGameMode::GetRequiredPlayerCount() const
 	}
 }
 
+int32 ASnakeGameMode::GetRequiredFoodCount() const
+{
+	switch (SnakeMode)
+	{
+	case ESnakeMode::Single:
+		return 1;
+
+	case ESnakeMode::Coop:
+	case ESnakeMode::Battle:
+		return 2;
+
+	default:
+		return 1;
+	}
+}
+
 void ASnakeGameMode::CacheGridManager()
 {
 	GridManager = Cast<AGridManager>(UGameplayStatics::GetActorOfClass(this, AGridManager::StaticClass()));
@@ -155,11 +171,11 @@ void ASnakeGameMode::StartPlayingRun()
 	
 	EnsureLocalPlayers();
 	SpawnAllSnakes();
-	SpawnFood();
+	SpawnFoods();
 	
 	StartCurrentStage();
 	
-	MoveFoodToRandomFreeCell();
+	MoveAllFoodsToRandomFreeCells();
 	
 	if (ASnakePlayerController* PC = Cast<ASnakePlayerController>(
 		UGameplayStatics::GetPlayerController(this, 0)))
@@ -307,18 +323,38 @@ void ASnakeGameMode::SpawnSnakeForPlayer(int32 PlayerIndex)
 // 	
 // }
 
-void ASnakeGameMode::SpawnFood()
+void ASnakeGameMode::SpawnFoods()
 {
-	if (!FoodActorClass ||!GridManager)
-		return;;
-	
-	if (SpawnedFoodActor)
+	if (!FoodActorClass || !GridManager)
 	{
-		SpawnedFoodActor->Destroy();
-		SpawnedFoodActor = nullptr;
+		return;
 	}
-	
-	SpawnedFoodActor = GetWorld()->SpawnActor<AFoodActor>(FoodActorClass, FVector::ZeroVector, FRotator::ZeroRotator);
+
+	for (AFoodActor* Food : SpawnedFoodActors)
+	{
+		if (Food)
+		{
+			Food->Destroy();
+		}
+	}
+
+	SpawnedFoodActors.Empty();
+
+	const int32 FoodCount = GetRequiredFoodCount();
+
+	for (int32 i = 0; i < FoodCount; i++)
+	{
+		AFoodActor* NewFood = GetWorld()->SpawnActor<AFoodActor>(
+			FoodActorClass,
+			FVector::ZeroVector,
+			FRotator::ZeroRotator
+		);
+
+		if (NewFood)
+		{
+			SpawnedFoodActors.Add(NewFood);
+		}
+	}
 }
 
 void ASnakeGameMode::StartCurrentStage()
@@ -418,9 +454,19 @@ void ASnakeGameMode::AdvanceToNextStage()
 	OnStageAdvanced.Broadcast(CurrentStageIndex);
 	
 	StartCurrentStage();
-	MoveFoodToRandomFreeCell();
+	MoveAllFoodsToRandomFreeCells();
 }
 
+void ASnakeGameMode::MoveAllFoodsToRandomFreeCells()
+{
+	for (AFoodActor* Food : SpawnedFoodActors)
+	{
+		if (Food)
+		{
+			MoveFoodToRandomFreeCell(Food);
+		}
+	}
+}
 
 void ASnakeGameMode::HandleStageTimeExpired()
 {
@@ -436,15 +482,16 @@ void ASnakeGameMode::HandleStageTimeExpired()
 	}
 }
 
-void ASnakeGameMode::MoveFoodToRandomFreeCell()
+void ASnakeGameMode::MoveFoodToRandomFreeCell(AFoodActor* FoodToMove)
 {
-	if (!GridManager || !SpawnedFoodActor)
+	if (!GridManager || !FoodToMove)
 	{
 		return;
 	}
-	
+
 	TArray<FIntVector> ForbiddenCells;
 
+	// 避开所有蛇
 	for (AABoxRoverPawn* Snake : SpawnedSnakePawns)
 	{
 		if (Snake)
@@ -452,26 +499,45 @@ void ASnakeGameMode::MoveFoodToRandomFreeCell()
 			ForbiddenCells.Append(Snake->GetAllOccupiedGridCells());
 		}
 	}
-	
+
+	// 避开其他 food
+	for (AFoodActor* Food : SpawnedFoodActors)
+	{
+		if (Food && Food != FoodToMove && Food->IsFoodActive())
+		{
+			ForbiddenCells.Add(Food->GetFoodGridPosition());
+		}
+	}
+
 	FIntVector NewFoodCell;
 	if (GridManager->TryGetRandomFreeCell(NewFoodCell, ForbiddenCells))
 	{
-		SpawnedFoodActor->RespawnFood(NewFoodCell, GridManager->GetCellWorldPosition(NewFoodCell));
+		FoodToMove->RespawnFood(
+			NewFoodCell,
+			GridManager->GetCellWorldPosition(NewFoodCell)
+		);
 	}
 }
 
-void ASnakeGameMode::HandleFoodConsumed(int32 ScoreValue)
+void ASnakeGameMode::HandleFoodConsumed(int32 PlayerIndex, int32 ScoreValue, AFoodActor* ConsumedFood)
 {
 	const FSnakeStageConfig* Stage = GetCurrentStageConfig();
-
 	const int32 FinalScoreValue = Stage ? Stage->FoodScore : ScoreValue;
 
-	StageScore += FinalScoreValue;
-	TotalScore += FinalScoreValue;
-
-	if (ASnakeGameState* GS = GetSnakeGameState())
+	if (SnakeMode == ESnakeMode::Battle)
 	{
-		GS->SetScore(StageScore);
+		// 下一步再做独立分数
+		UE_LOG(LogTemp, Warning, TEXT("Battle: Player %d ate food."), PlayerIndex);
+	}
+	else
+	{
+		StageScore += FinalScoreValue;
+		TotalScore += FinalScoreValue;
+
+		if (ASnakeGameState* GS = GetSnakeGameState())
+		{
+			GS->SetScore(StageScore);
+		}
 	}
 
 	if (HasMetStageRequirement())
@@ -479,9 +545,8 @@ void ASnakeGameMode::HandleFoodConsumed(int32 ScoreValue)
 		AdvanceToNextStage();
 		return;
 	}
-	
-	MoveFoodToRandomFreeCell();
-	
+
+	MoveFoodToRandomFreeCell(ConsumedFood);
 }
 
 void ASnakeGameMode::HandleSnakeDeath()

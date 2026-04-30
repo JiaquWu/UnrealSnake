@@ -27,7 +27,8 @@ public:
 	void RespawnFood(const FIntVector& NewGridPosition, const FVector& NewWorldLocation);
 	
 	void DeactivateFood();
-	
+	const FIntVector& GetFoodGridPosition() const;
+	bool IsFoodActive() const;
 	
 protected:
 	// Called when the game starts or when spawned

@@ -920,7 +920,7 @@ void AABoxRoverPawn::HandleFoodOverlap(AFoodActor* FoodActor)
 	
 	GrowSnake(1);
 	FoodActor->DeactivateFood();
-	OnFoodConsumed.Broadcast(10);
+	OnFoodConsumed.Broadcast(PlayerIndex, 10, FoodActor);
 	
 	//FoodActor->SetActorLocation(FoodActor->GetActorLocation());
 }
@@ -975,3 +975,12 @@ void AABoxRoverPawn::CacheGridManager()
 	
 }
 
+void AABoxRoverPawn::SetPlayerIndex(int32 NewPlayerIndex)
+{
+	PlayerIndex = NewPlayerIndex;
+}
+
+int32 AABoxRoverPawn::GetPlayerIndex() const
+{
+	return PlayerIndex;
+}

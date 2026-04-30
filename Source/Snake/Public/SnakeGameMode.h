@@ -82,6 +82,8 @@ public:
 	
 	int32 GetRequiredPlayerCount() const;
 	
+	int32 GetRequiredFoodCount() const;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Rules")
 	ESnakeMode SnakeMode = ESnakeMode::Single;
 
@@ -117,7 +119,7 @@ private:
 	TObjectPtr<AABoxRoverPawn> SpawnedSnakePawn;
 	
 	UPROPERTY()
-	TObjectPtr<AFoodActor> SpawnedFoodActor;
+	TArray<TObjectPtr<AFoodActor>> SpawnedFoodActors;
 	
 	UPROPERTY()
 	TObjectPtr<AGridManager> GridManager;
@@ -127,8 +129,9 @@ private:
 	void SpawnSnakeForPlayer(int32 PlayerIndex);
 	void CacheGridManager();
 	//void SpawnSnake();
-	void SpawnFood();
-	void MoveFoodToRandomFreeCell();
+	void SpawnFoods();
+	void MoveFoodToRandomFreeCell(AFoodActor* FoodToMove);
+	void MoveAllFoodsToRandomFreeCells();
 	
 	void StartCurrentStage();
 	void AdvanceToNextStage();
@@ -137,7 +140,7 @@ private:
 	const FSnakeStageConfig* GetCurrentStageConfig() const;
 	
 	UFUNCTION()
-	void HandleFoodConsumed(int32 ScoreValue);
+	void HandleFoodConsumed(int32 PlayerIndex, int32 ScoreValue, AFoodActor* ConsumedFood);
 	
 	UFUNCTION()
 	void HandleSnakeDeath();

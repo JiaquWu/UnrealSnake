@@ -88,3 +88,13 @@ void AFoodActor::RespawnFood(const FIntVector& NewGridPosition, const FVector& N
 	CollisionSphere->SetGenerateOverlapEvents(true);
 	CollisionSphere->UpdateOverlaps();
 }
+
+const FIntVector& AFoodActor::GetFoodGridPosition() const
+{
+	return FoodGridPosition;
+}
+
+bool AFoodActor::IsFoodActive() const
+{
+	return bIsActive;
+}

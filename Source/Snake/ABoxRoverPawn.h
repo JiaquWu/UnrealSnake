@@ -8,7 +8,13 @@
 #include "InputActionValue.h"
 #include "ABoxRoverPawn.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFoodConsumed, int32, Score);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+	FOnFoodConsumed,
+	int32, PlayerIndex,
+	int32, Score,
+	AFoodActor*, FoodActor
+);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSnakeDied);
 
 class UInputMappingContext;
@@ -93,6 +99,9 @@ protected:
 	
 	FIntVector GetClampedStartGridPosition() const;
 	FVector GetVectorFromDirection(ESnakeDirection Direction) const;
+	
+
+	int32 PlayerIndex = 0;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Grid", meta = (AllowPrivateAccess = "true"))
 	FIntVector StartGridPosition = FIntVector(10, 10, 0);
@@ -230,4 +239,7 @@ public:
 	virtual void CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult) override;
 	
 	TArray<FIntVector> GetAllOccupiedGridCells() const;
+	
+	void SetPlayerIndex(int32 NewPlayerIndex);
+	int32 GetPlayerIndex() const;
 };
