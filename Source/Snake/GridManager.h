@@ -15,6 +15,18 @@ class SNAKE_API AGridManager : public AActor
 public:	
 	AGridManager();
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Layer Visual")
+	TArray<TObjectPtr<UMaterialInterface>> LayerMaterials;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Grid|Layer Visual")
+	TObjectPtr<UMaterialInterface> DefaultFloorMaterial;
+	
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UInstancedStaticMeshComponent>> FloorLayerInstances;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UInstancedStaticMeshComponent>> WallLayerInstances;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UInstancedStaticMeshComponent* FloorInstances;
 	
@@ -65,6 +77,8 @@ public:
 	
 	TSet<FIntVector> BlockedCells;
 	
+	UMaterialInterface* GetLayerMaterial(int32 Layer) const;
+	
 	FVector GetCellWorldPosition(const FIntVector& GridCell) const;
 	
 	bool IsCellValid(const FIntVector& GridCell) const;
@@ -78,6 +92,9 @@ public:
 	void GenerateVisualInstances();
 	void ClearVisualInstances();
 	void UpdateGridLighting();
+	
+	void EnsureLayerInstanceComponents();
+	void ApplyLayerMaterials();
 
 protected:
 	virtual void BeginPlay() override;

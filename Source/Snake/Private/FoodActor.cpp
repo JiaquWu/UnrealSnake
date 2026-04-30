@@ -6,6 +6,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Snake/ABoxRoverPawn.h"
+#include "Kismet//GameplayStatics.h"
 
 // Sets default values
 AFoodActor::AFoodActor()
@@ -33,6 +34,7 @@ void AFoodActor::BeginPlay()
 {
 	Super::BeginPlay();
 	CollisionSphere->OnComponentBeginOverlap.AddDynamic(this, &AFoodActor::HandleFoodOverlap);
+	GridManager = Cast<AGridManager>(UGameplayStatics::GetActorOfClass(GetWorld(), AGridManager::StaticClass()));
 }
 
 // Called every frame
@@ -72,6 +74,15 @@ void AFoodActor::RespawnFood(const FIntVector& NewGridPosition, const FVector& N
 	FoodGridPosition = NewGridPosition;
 	SetActorLocation(NewWorldLocation, false, nullptr, ETeleportType::TeleportPhysics);
 
+	
+	if (GridManager && FoodMesh)
+	{
+		if (UMaterialInterface* LayerMaterial = GridManager->GetLayerMaterial(FoodGridPosition.Z))
+		{
+			FoodMesh->SetMaterial(0, LayerMaterial);
+		}
+	}
+	
 	bIsActive = true;
 	CollisionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	CollisionSphere->SetGenerateOverlapEvents(true);

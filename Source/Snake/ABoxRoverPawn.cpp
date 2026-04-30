@@ -201,6 +201,25 @@ void AABoxRoverPawn::Tick(float DeltaTime)
 	// 		TEXT("Controller: NULL")
 	// 	);
 	// }
+	
+	if (GridManager)
+	{
+		const float BaseZ = GridManager->GetActorLocation().Z;
+		const FVector HeadLocation = GetActorLocation();
+		const FVector GroundLocation(HeadLocation.X, HeadLocation.Y, BaseZ);
+
+		DrawDebugLine(
+			GetWorld(),
+			HeadLocation,
+			GroundLocation,
+			FColor::Green,
+			false,
+			-1.f,
+			0,
+			4.f
+		);
+	}
+	
 	if (!FMath::IsNearlyZero(MoveInput))
 	{
 		const FVector MoveDelta = GetActorForwardVector() * MoveInput * MoveSpeed * DeltaTime;
@@ -559,6 +578,14 @@ void AABoxRoverPawn::UpdateBodyVisuals(float Alpha)
 		const FVector NewWorldLocation = FMath::Lerp(StartWorldLocation, TargetWorldLocation, Alpha);
 
 		BodySegmentMeshes[i]->SetWorldLocation(NewWorldLocation);
+		
+		if (GridManager)
+		{
+			if (UMaterialInterface* LayerMaterial = GridManager->GetLayerMaterial(TargetCell.Z))
+			{
+				BodySegmentMeshes[i]->SetMaterial(0, LayerMaterial);
+			}
+		}
 	}
 }
 

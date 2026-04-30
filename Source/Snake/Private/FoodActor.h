@@ -4,8 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Snake/GridManager.h"
 #include "FoodActor.generated.h"
-
 
 class USphereComponent;
 class UStaticMeshComponent;
@@ -46,6 +46,8 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 private:
+	TObjectPtr<AGridManager> GridManager = nullptr;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta= (AllowPrivateAccess))
 	TObjectPtr<USphereComponent> CollisionSphere;
 	

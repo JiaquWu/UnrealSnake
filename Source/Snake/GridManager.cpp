@@ -36,14 +36,15 @@ void AGridManager::BeginPlay()
 
 FVector AGridManager::GetCellWorldPosition(const FIntVector& GridCell) const
 {
-	const FVector OriginPosition = GetActorLocation();
+	//const FVector OriginPosition = GetActorLocation();
 
-	const float X = GridCell.X * CellSize + OriginPosition.X + CellSize * 0.5f;
-	const float Y = GridCell.Y * CellSize + OriginPosition.Y + CellSize * 0.5f;
+	const float X = GridCell.X * CellSize + GridOrigin.X + CellSize * 0.5f;
+	const float Y = GridCell.Y * CellSize + GridOrigin.Y + CellSize * 0.5f;
+	const float Z = GridCell.Z * CellSize + GridOrigin.Z;
 
-	const float Z = GridCell.Z * CellSize + OriginPosition.Z;
-	
 	return FVector(X, Y, Z);
+	
+	//return FVector(X, Y, Z);
 }
 
 bool AGridManager::IsCellValid(const FIntVector& GridCell) const
@@ -125,17 +126,19 @@ void AGridManager::GenerateBlockedCells()
 void AGridManager::GenerateVisualInstances()
 {
 	ClearVisualInstances();
-
-	if (!FloorInstances || !WallInstances)
-	{
-		return;
-	}
+	EnsureLayerInstanceComponents();
 
 	int32 FloorCount = 0;
 	int32 WallCount = 0;
 
 	for (int32 CellZ = 0; CellZ < GridDepth; CellZ++)
 	{
+		UInstancedStaticMeshComponent* FloorLayer =
+			FloorLayerInstances.IsValidIndex(CellZ) ? FloorLayerInstances[CellZ] : nullptr;
+
+		UInstancedStaticMeshComponent* WallLayer =
+			WallLayerInstances.IsValidIndex(CellZ) ? WallLayerInstances[CellZ] : nullptr;
+
 		for (int32 CellX = 0; CellX < GridWidth; CellX++)
 		{
 			for (int32 CellY = 0; CellY < GridHeight; CellY++)
@@ -143,21 +146,24 @@ void AGridManager::GenerateVisualInstances()
 				const FIntVector Cell(CellX, CellY, CellZ);
 				const bool bBlocked = BlockedCells.Contains(Cell);
 				const FVector BaseWorld = GetCellWorldPosition(Cell);
-
-				if (bBlocked)
+				
+				
+				if (bBlocked && WallLayer)
 				{
 					const FVector WallLocation = BaseWorld + FVector(0, 0, WallZOffset);
 					const FTransform WallTransform(FRotator::ZeroRotator, WallLocation, InstanceScale);
-					WallInstances->AddInstance(WallTransform);
+					WallLayer->AddInstance(WallTransform);
 					WallCount++;
 				}
-				else if (bGenerateFloors)
+				else if (bGenerateFloors && FloorLayer)
 				{
-					const FVector FloorLocation = BaseWorld + FVector(0, 0, FloorZOffset);
+					const FVector FloorLocation = BaseWorld + FVector(0, 0, -CellSize * 0.5f + FloorZOffset);
 					const FTransform FloorTransform(FRotator::ZeroRotator, FloorLocation, InstanceScale);
-					FloorInstances->AddInstance(FloorTransform);
+					FloorLayer->AddInstance(FloorTransform);
 					FloorCount++;
 				}
+
+				
 			}
 		}
 	}
@@ -175,11 +181,29 @@ void AGridManager::ClearVisualInstances()
 	if (FloorInstances)
 	{
 		FloorInstances->ClearInstances();
+		FloorInstances->SetVisibility(false);
 	}
 	
 	if (WallInstances)
 	{
 		WallInstances->ClearInstances();
+		WallInstances->SetVisibility(false);
+	}
+
+	for (UInstancedStaticMeshComponent* Layer : FloorLayerInstances)
+	{
+		if (Layer)
+		{
+			Layer->ClearInstances();
+		}
+	}
+
+	for (UInstancedStaticMeshComponent* Layer : WallLayerInstances)
+	{
+		if (Layer)
+		{
+			Layer->ClearInstances();
+		}
 	}
 }
 
@@ -209,4 +233,94 @@ void AGridManager::UpdateGridLighting()
 	GridRectLight->SetAttenuationRadius(FMath::Max3(GridWorldWidth, GridWorldHeight, GridWorldDepth) * 1.5f);
 	GridRectLight->SetIntensity(RectLightIntensity);
 	GridRectLight->SetCastShadows(false);
+}
+
+UMaterialInterface* AGridManager::GetLayerMaterial(int32 Layer) const
+{
+	if (LayerMaterials.IsValidIndex(Layer))
+	{
+		return LayerMaterials[Layer];
+	}
+
+	return nullptr;
+}
+
+void AGridManager::EnsureLayerInstanceComponents()
+{
+	while (FloorLayerInstances.Num() < GridDepth)
+	{
+		const int32 LayerIndex = FloorLayerInstances.Num();
+
+		UInstancedStaticMeshComponent* NewFloorLayer =
+			NewObject<UInstancedStaticMeshComponent>(
+				this,
+				*FString::Printf(TEXT("FloorLayerInstances_%d"), LayerIndex)
+			);
+
+		NewFloorLayer->SetupAttachment(RootComponent);
+		NewFloorLayer->RegisterComponent();
+		NewFloorLayer->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		if (FloorInstances)
+		{
+			NewFloorLayer->SetStaticMesh(FloorInstances->GetStaticMesh());
+		}
+
+		FloorLayerInstances.Add(NewFloorLayer);
+	}
+
+	while (WallLayerInstances.Num() < GridDepth)
+	{
+		const int32 LayerIndex = WallLayerInstances.Num();
+
+		UInstancedStaticMeshComponent* NewWallLayer =
+			NewObject<UInstancedStaticMeshComponent>(
+				this,
+				*FString::Printf(TEXT("WallLayerInstances_%d"), LayerIndex)
+			);
+
+		NewWallLayer->SetupAttachment(RootComponent);
+		NewWallLayer->RegisterComponent();
+
+		NewWallLayer->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		if (WallInstances)
+		{
+			NewWallLayer->SetStaticMesh(WallInstances->GetStaticMesh());
+		}
+
+		WallLayerInstances.Add(NewWallLayer);
+	}
+
+	ApplyLayerMaterials();
+}
+
+void AGridManager::ApplyLayerMaterials()
+{
+	for (int32 LayerIndex = 0; LayerIndex < GridDepth; LayerIndex++)
+	{
+		// Floor: all layers use the same material
+		if (FloorLayerInstances.IsValidIndex(LayerIndex) && FloorLayerInstances[LayerIndex])
+		{
+			if (DefaultFloorMaterial)
+			{
+				FloorLayerInstances[LayerIndex]->SetMaterial(0, DefaultFloorMaterial);
+			}
+		}
+
+		// Wall: use layer material
+		UMaterialInterface* LayerMaterial = nullptr;
+		if (LayerMaterials.IsValidIndex(LayerIndex))
+		{
+			LayerMaterial = LayerMaterials[LayerIndex];
+		}
+
+		if (WallLayerInstances.IsValidIndex(LayerIndex) && WallLayerInstances[LayerIndex])
+		{
+			if (LayerMaterial)
+			{
+				WallLayerInstances[LayerIndex]->SetMaterial(0, LayerMaterial);
+			}
+		}
+	}
 }
