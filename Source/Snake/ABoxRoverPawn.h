@@ -17,6 +17,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSnakeDied, int32, PlayerIndex);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBeforeMoveStep);
+
 class UInputMappingContext;
 class UStaticMeshComponent;
 class USphereComponent;
@@ -251,5 +253,12 @@ public:
 	
 	void SetOtherSnakes(const TArray<AABoxRoverPawn*>& NewOtherSnakes);
 	void SetCanHitOtherSnakes(bool bCanHit);
+	
+	UPROPERTY(BlueprintAssignable, Category="Snake|Events")
+	FOnBeforeMoveStep OnBeforeMoveStep;
+	
+	FIntVector GetCurrentGridPosition() const;
+	ESnakeDirection GetCurrentDirection() const;
+	bool CanMoveToCell(const FIntVector& Cell) const;
 	
 };

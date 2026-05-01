@@ -10,7 +10,7 @@ class AABoxRoverPawn;
 class AFoodActor;
 class AGridManager;
 class ASnakeGameState;
-
+class USnakeAIComponent;
 
 /**
  * 
@@ -21,6 +21,13 @@ enum class ESnakeMode : uint8
 	Single UMETA(DisplayName = "Single Player"),
 	Coop   UMETA(DisplayName = "Co-op"),
 	Battle UMETA(DisplayName = "Battle")
+};
+
+UENUM(BlueprintType)
+enum class ESecondPlayerControlMode : uint8
+{
+	Human UMETA(DisplayName="Human"),
+	AI    UMETA(DisplayName="AI")
 };
 
 USTRUCT(BlueprintType)
@@ -89,6 +96,15 @@ public:
 	void EndBattleDraw();
 	void ShowOutroForAllPlayers();
 	
+	const TArray<TObjectPtr<AFoodActor>>& GetSpawnedFoodActors() const;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="AI")
+	ESecondPlayerControlMode SecondPlayerControlMode = ESecondPlayerControlMode::Human;
+	
+	bool ShouldUseAIForPlayer(int32 PlayerIndex) const;
+	
+	UPROPERTY(EditDefaultsOnly, Category="AI")
+	bool bUseAIForSecondPlayer = false;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Rules")
 	ESnakeMode SnakeMode = ESnakeMode::Single;

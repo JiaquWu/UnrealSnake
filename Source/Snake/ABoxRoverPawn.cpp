@@ -489,6 +489,8 @@ void AABoxRoverPawn::TickGridMovement(float DeltaTime)
 
 void AABoxRoverPawn::StartNewMoveStep()
 {
+	OnBeforeMoveStep.Broadcast();
+	
 	HandleDirectionChange();
 
 	const FIntVector GridOffset = DirectionToGridOffset(CurrentDirection);
@@ -1028,4 +1030,21 @@ bool AABoxRoverPawn::WouldHitOtherSnake(const FIntVector& NextCell) const
 	}
 
 	return false;
+}
+
+FIntVector AABoxRoverPawn::GetCurrentGridPosition() const
+{
+	return CurrentGridPosition;
+}
+
+ESnakeDirection AABoxRoverPawn::GetCurrentDirection() const
+{
+	return CurrentDirection;
+}
+
+bool AABoxRoverPawn::CanMoveToCell(const FIntVector& Cell) const
+{
+	return !WouldHitWall(Cell)
+		&& !WouldHitSelf(Cell)
+		&& !WouldHitOtherSnake(Cell);
 }

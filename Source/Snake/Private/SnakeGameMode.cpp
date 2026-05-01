@@ -7,6 +7,7 @@
 #include "FoodActor.h"
 #include "Snake/GridManager.h"
 #include "SnakePlayerController.h"
+#include "SnakeAIComponent.h"
 #include "Kismet//GameplayStatics.h"
 
 ASnakeGameMode::ASnakeGameMode()
@@ -41,10 +42,21 @@ void ASnakeGameMode::InitGame(const FString& MapName, const FString& Options, FS
 		SnakeMode = ESnakeMode::Battle;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("InitGame Options=%s | ModeString=%s | SnakeMode=%s"),
+	const FString P2String = UGameplayStatics::ParseOption(Options, TEXT("P2"));
+
+	if (P2String.Equals(TEXT("AI"), ESearchCase::IgnoreCase))
+	{
+		SecondPlayerControlMode = ESecondPlayerControlMode::AI;
+	}
+	else
+	{
+		SecondPlayerControlMode = ESecondPlayerControlMode::Human;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("InitGame Options=%s | Mode=%s | P2=%s"),
 		*Options,
-		*ModeString,
-		*UEnum::GetValueAsString(SnakeMode));
+		*UEnum::GetValueAsString(SnakeMode),
+		*UEnum::GetValueAsString(SecondPlayerControlMode));
 }
 
 void ASnakeGameMode::Tick(float DeltaSeconds)
@@ -257,21 +269,57 @@ void ASnakeGameMode::SpawnSnakeForPlayer(int32 PlayerIndex)
 	
 	SpawnedSnakePawns.Add(NewSnake);
 
+	const bool bUseAI = ShouldUseAIForPlayer(PlayerIndex);
+
 	if (ASnakePlayerController* PC = Cast<ASnakePlayerController>(
-	UGameplayStatics::GetPlayerController(this, PlayerIndex)))
+		UGameplayStatics::GetPlayerController(this, PlayerIndex)))
 	{
 		PC->Possess(NewSnake);
+		
+		FTimerHandle CameraTimerHandle;
+		GetWorldTimerManager().SetTimer(
+			CameraTimerHandle,
+			FTimerDelegate::CreateWeakLambda(this, [PC, NewSnake]()
+			{
+				if (PC && NewSnake)
+				{
+					PC->SetViewTargetWithBlend(NewSnake, 0.f);
+				}
+			}),
+			0.01f,
+			false
+		);
+		
 		//PC->SetViewTargetWithBlend(NewSnake, 0.f);
-		PC->SetControlledSnake(NewSnake);
+
+		if (bUseAI)
+		{
+			PC->SetControlledSnake(nullptr);
+
+			USnakeAIComponent* AIComponent = NewObject<USnakeAIComponent>(NewSnake);
+			if (AIComponent)
+			{
+				AIComponent->RegisterComponent();
+				AIComponent->Init(NewSnake);
+
+				UE_LOG(LogTemp, Warning, TEXT("AI added to PlayerIndex=%d Snake=%s"),
+					PlayerIndex,
+					*GetNameSafe(NewSnake));
+			}
+		}
+		else
+		{
+			PC->SetControlledSnake(NewSnake);
+		}
 
 		UE_LOG(LogTemp, Warning, TEXT(
-			"PlayerIndex=%d | PC=%s | Pawn=%s | ViewTarget=%s | ControlledSnake=%s"
+			"PlayerIndex=%d | bUseAI=%s | PC=%s | Pawn=%s | ViewTarget=%s"
 		),
 			PlayerIndex,
+			bUseAI ? TEXT("true") : TEXT("false"),
 			*GetNameSafe(PC),
 			*GetNameSafe(PC->GetPawn()),
-			*GetNameSafe(PC->GetViewTarget()),
-			*GetNameSafe(NewSnake));
+			*GetNameSafe(PC->GetViewTarget()));
 	}
 	else
 	{
@@ -617,20 +665,39 @@ void ASnakeGameMode::RetartRun()
 
 FString ASnakeGameMode::GetCurrentModeOption() const
 {
+	FString ModeOption;
+
 	switch (SnakeMode)
 	{
 	case ESnakeMode::Single:
-		return TEXT("Mode=Single");
+		ModeOption = TEXT("Mode=Single");
+		break;
 
 	case ESnakeMode::Coop:
-		return TEXT("Mode=Coop");
+		ModeOption = TEXT("Mode=Coop");
+		break;
 
 	case ESnakeMode::Battle:
-		return TEXT("Mode=Battle");
+		ModeOption = TEXT("Mode=Battle");
+		break;
 
 	default:
-		return TEXT("Mode=Single");
+		ModeOption = TEXT("Mode=Single");
+		break;
 	}
+
+	if (SnakeMode != ESnakeMode::Single)
+	{
+		const FString P2Option =
+			SecondPlayerControlMode == ESecondPlayerControlMode::AI
+			? TEXT("P2=AI")
+			: TEXT("P2=Human");
+
+		ModeOption += TEXT("?");
+		ModeOption += P2Option;
+	}
+
+	return ModeOption;
 }
 
 void ASnakeGameMode::ReturnToMainMenu()
@@ -763,4 +830,17 @@ void ASnakeGameMode::EndRun()
 	}
 
 	ShowOutroForAllPlayers();
+
+}
+
+const TArray<TObjectPtr<AFoodActor>>& ASnakeGameMode::GetSpawnedFoodActors() const
+{
+	return SpawnedFoodActors;
+}
+
+bool ASnakeGameMode::ShouldUseAIForPlayer(int32 PlayerIndex) const
+{
+	return PlayerIndex == 1
+		&& SnakeMode != ESnakeMode::Single
+		&& SecondPlayerControlMode == ESecondPlayerControlMode::AI;
 }
