@@ -494,7 +494,9 @@ void AABoxRoverPawn::StartNewMoveStep()
 	const FIntVector GridOffset = DirectionToGridOffset(CurrentDirection);
 	PendingNextGridPosition = CurrentGridPosition + GridOffset;
 
-	if (WouldHitWall(PendingNextGridPosition) || WouldHitSelf(PendingNextGridPosition))
+	if (WouldHitWall(PendingNextGridPosition) ||
+	WouldHitSelf(PendingNextGridPosition) ||
+	WouldHitOtherSnake(PendingNextGridPosition))
 	{
 		HandleSnakeDeath();
 		return;
@@ -944,7 +946,7 @@ void AABoxRoverPawn::HandleSnakeDeath()
 	
 	UE_LOG(LogTemp, Warning, TEXT("Pawn HandleSnakeDeath on %s"), *GetName());
 	
-	OnSnakeDied.Broadcast();
+	OnSnakeDied.Broadcast(PlayerIndex);
 	
 	
 }
@@ -983,4 +985,47 @@ void AABoxRoverPawn::SetPlayerIndex(int32 NewPlayerIndex)
 int32 AABoxRoverPawn::GetPlayerIndex() const
 {
 	return PlayerIndex;
+}
+
+void AABoxRoverPawn::SetCanHitOtherSnakes(bool bCanHit)
+{
+	bCanHitOtherSnakes = bCanHit;
+}
+
+void AABoxRoverPawn::SetOtherSnakes(const TArray<AABoxRoverPawn*>& NewOtherSnakes)
+{
+	OtherSnakes.Empty();
+
+	for (AABoxRoverPawn* Snake : NewOtherSnakes)
+	{
+		if (Snake && Snake != this)
+		{
+			OtherSnakes.Add(Snake);
+		}
+	}
+}
+
+bool AABoxRoverPawn::WouldHitOtherSnake(const FIntVector& NextCell) const
+{
+	if (!bCanHitOtherSnakes)
+	{
+		return false;
+	}
+
+	for (AABoxRoverPawn* OtherSnake : OtherSnakes)
+	{
+		if (!OtherSnake)
+		{
+			continue;
+		}
+
+		const TArray<FIntVector> OtherOccupiedCells = OtherSnake->GetAllOccupiedGridCells();
+
+		if (OtherOccupiedCells.Contains(NextCell))
+		{
+			return true;
+		}
+	}
+
+	return false;
 }

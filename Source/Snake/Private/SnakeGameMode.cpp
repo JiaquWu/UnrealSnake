@@ -163,6 +163,9 @@ void ASnakeGameMode::StartPlayingRun()
 	StageScore = 0;
 	TotalScore = 0;
 	
+	const int32 PlayerCount = GetRequiredPlayerCount();
+	PlayerTotalScores.Init(0, PlayerCount);
+	
 	if (ASnakeGameState* GS = GetSnakeGameState())
 	{
 		GS->SetScore(0);
@@ -209,6 +212,8 @@ void ASnakeGameMode::SpawnAllSnakes()
 		SpawnSnakeForPlayer(PlayerIndex);
 	}
 
+	ConfigureSnakeInteractions();
+	
 	if (SpawnedSnakePawns.IsValidIndex(0))
 	{
 		SpawnedSnakePawn = SpawnedSnakePawns[0];
@@ -247,7 +252,9 @@ void ASnakeGameMode::SpawnSnakeForPlayer(int32 PlayerIndex)
 	{
 		return;
 	}
-
+	
+	NewSnake->SetPlayerIndex(PlayerIndex);
+	
 	SpawnedSnakePawns.Add(NewSnake);
 
 	if (ASnakePlayerController* PC = Cast<ASnakePlayerController>(
@@ -368,10 +375,22 @@ void ASnakeGameMode::StartCurrentStage()
 
 	StageScore = 0;
 	RemainingStageTime = Stage->TimeLimit;
+	
+	const int32 PlayerCount = GetRequiredPlayerCount();
+	PlayerStageScores.Init(0, PlayerCount);
 
 	if (ASnakeGameState* GS = GetSnakeGameState())
 	{
-		GS->SetScore(StageScore);
+		if (SnakeMode == ESnakeMode::Battle)
+		{
+			GS->SetBattleScores(0, 0);
+		}
+		else
+		{
+			GS->SetScore(StageScore);
+		}
+		
+		//GS->SetScore(StageScore);
 		GS->SetStage(CurrentStageIndex, Stage->RequirementScore);
 		GS->SetRemainingStageTime(RemainingStageTime);
 	}
@@ -419,8 +438,20 @@ bool ASnakeGameMode::HasMetStageRequirement() const
 		return StageScore >= Stage->RequirementScore;
 
 	case ESnakeMode::Battle:
-		
-		return false;
+		{
+			const int32 PlayerCount = GetRequiredPlayerCount();
+
+			for (int32 i = 0; i < PlayerCount; i++)
+			{
+				if (!PlayerStageScores.IsValidIndex(i) ||
+					PlayerStageScores[i] < Stage->RequirementScore)
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
 
 	default:
 		return false;
@@ -442,11 +473,7 @@ void ASnakeGameMode::AdvanceToNextStage()
 			//you win?
 		}
 
-		if (ASnakePlayerController* PC = Cast<ASnakePlayerController>(
-			UGameplayStatics::GetPlayerController(this, 0)))
-		{
-			PC->ShowOutro();
-		}
+		ShowOutroForAllPlayers();
 
 		return;
 	}
@@ -470,6 +497,12 @@ void ASnakeGameMode::MoveAllFoodsToRandomFreeCells()
 
 void ASnakeGameMode::HandleStageTimeExpired()
 {
+	if (SnakeMode == ESnakeMode::Battle)
+	{
+		ResolveBattleStageTimeExpired();
+		return;
+	}
+
 	if (HasMetStageRequirement())
 	{
 		AdvanceToNextStage();
@@ -477,8 +510,7 @@ void ASnakeGameMode::HandleStageTimeExpired()
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Stage failed. Score: %d"), StageScore);
-
-		HandleSnakeDeath();
+		EndRun();
 	}
 }
 
@@ -491,7 +523,6 @@ void ASnakeGameMode::MoveFoodToRandomFreeCell(AFoodActor* FoodToMove)
 
 	TArray<FIntVector> ForbiddenCells;
 
-	// 避开所有蛇
 	for (AABoxRoverPawn* Snake : SpawnedSnakePawns)
 	{
 		if (Snake)
@@ -500,7 +531,6 @@ void ASnakeGameMode::MoveFoodToRandomFreeCell(AFoodActor* FoodToMove)
 		}
 	}
 
-	// 避开其他 food
 	for (AFoodActor* Food : SpawnedFoodActors)
 	{
 		if (Food && Food != FoodToMove && Food->IsFoodActive())
@@ -526,8 +556,23 @@ void ASnakeGameMode::HandleFoodConsumed(int32 PlayerIndex, int32 ScoreValue, AFo
 
 	if (SnakeMode == ESnakeMode::Battle)
 	{
-		// 下一步再做独立分数
-		UE_LOG(LogTemp, Warning, TEXT("Battle: Player %d ate food."), PlayerIndex);
+		if (PlayerStageScores.IsValidIndex(PlayerIndex))
+		{
+			PlayerStageScores[PlayerIndex] += FinalScoreValue;
+		}
+
+		if (PlayerTotalScores.IsValidIndex(PlayerIndex))
+		{
+			PlayerTotalScores[PlayerIndex] += FinalScoreValue;
+		}
+
+		if (ASnakeGameState* GS = GetSnakeGameState())
+		{
+			const int32 P0Score = PlayerStageScores.IsValidIndex(0) ? PlayerStageScores[0] : 0;
+			const int32 P1Score = PlayerStageScores.IsValidIndex(1) ? PlayerStageScores[1] : 0;
+
+			GS->SetBattleScores(P0Score, P1Score);
+		}
 	}
 	else
 	{
@@ -549,21 +594,19 @@ void ASnakeGameMode::HandleFoodConsumed(int32 PlayerIndex, int32 ScoreValue, AFo
 	MoveFoodToRandomFreeCell(ConsumedFood);
 }
 
-void ASnakeGameMode::HandleSnakeDeath()
+void ASnakeGameMode::HandleSnakeDeath(int32 DeadPlayerIndex)
 {
-	
-	if (ASnakeGameState* GS = GetSnakeGameState())
+	UE_LOG(LogTemp, Warning, TEXT("GameMode HandleSnakeDeath received. DeadPlayer=%d"),
+		DeadPlayerIndex);
+
+	if (SnakeMode == ESnakeMode::Battle)
 	{
-		GS->SetSnakeGameState(ESnakeGameState::Outro);
+		const int32 WinnerIndex = DeadPlayerIndex == 0 ? 1 : 0;
+		EndBattleWithWinner(WinnerIndex);
+		return;
 	}
-	
-	UE_LOG(LogTemp, Warning, TEXT("GameMode HandleSnakeDeath received"));
-	
-	if (ASnakePlayerController* PC = Cast<ASnakePlayerController>(
-		UGameplayStatics::GetPlayerController(this, 0)))
-	{
-		PC->ShowOutro();
-	}
+
+	EndRun();
 }
 
 void ASnakeGameMode::RetartRun()
@@ -593,4 +636,131 @@ FString ASnakeGameMode::GetCurrentModeOption() const
 void ASnakeGameMode::ReturnToMainMenu()
 {
 	UGameplayStatics::OpenLevel(this, FName(TEXT("MainMenuMap")));
+}
+
+void ASnakeGameMode::ResolveBattleStageTimeExpired()
+{
+	const FSnakeStageConfig* Stage = GetCurrentStageConfig();
+	if (!Stage)
+	{
+		return;
+	}
+
+	const bool bP0Passed =
+		PlayerStageScores.IsValidIndex(0) &&
+		PlayerStageScores[0] >= Stage->RequirementScore;
+
+	const bool bP1Passed =
+		PlayerStageScores.IsValidIndex(1) &&
+		PlayerStageScores[1] >= Stage->RequirementScore;
+
+	if (bP0Passed && bP1Passed)
+	{
+		AdvanceToNextStage();
+		return;
+	}
+
+	if (bP0Passed && !bP1Passed)
+	{
+		EndBattleWithWinner(0);
+		return;
+	}
+
+	if (!bP0Passed && bP1Passed)
+	{
+		EndBattleWithWinner(1);
+		return;
+	}
+
+	const int32 P0Score = PlayerStageScores.IsValidIndex(0) ? PlayerStageScores[0] : 0;
+	const int32 P1Score = PlayerStageScores.IsValidIndex(1) ? PlayerStageScores[1] : 0;
+
+	if (P0Score > P1Score)
+	{
+		EndBattleWithWinner(0);
+	}
+	else if (P1Score > P0Score)
+	{
+		EndBattleWithWinner(1);
+	}
+	else
+	{
+		EndBattleDraw();
+	}
+}
+
+void ASnakeGameMode::EndBattleWithWinner(int32 WinnerPlayerIndex)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Battle ended. Winner: Player %d"), WinnerPlayerIndex);
+
+	if (ASnakeGameState* GS = GetSnakeGameState())
+	{
+		GS->SetSnakeGameState(ESnakeGameState::Outro);
+	}
+
+	ShowOutroForAllPlayers();
+}
+
+void ASnakeGameMode::EndBattleDraw()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Battle ended in draw."));
+
+	if (ASnakeGameState* GS = GetSnakeGameState())
+	{
+		GS->SetSnakeGameState(ESnakeGameState::Outro);
+	}
+
+	ShowOutroForAllPlayers();
+}
+
+void ASnakeGameMode::ShowOutroForAllPlayers()
+{
+	const int32 PlayerCount = GetRequiredPlayerCount();
+
+	for (int32 i = 0; i < PlayerCount; i++)
+	{
+		if (ASnakePlayerController* PC = Cast<ASnakePlayerController>(
+			UGameplayStatics::GetPlayerController(this, i)))
+		{
+			PC->ShowOutro();
+		}
+	}
+}
+
+
+void ASnakeGameMode::ConfigureSnakeInteractions()
+{
+	TArray<AABoxRoverPawn*> AllSnakes;
+
+	for (AABoxRoverPawn* Snake : SpawnedSnakePawns)
+	{
+		if (Snake)
+		{
+			AllSnakes.Add(Snake);
+		}
+	}
+
+	const bool bBattle = SnakeMode == ESnakeMode::Battle;
+
+	for (AABoxRoverPawn* Snake : AllSnakes)
+	{
+		if (!Snake)
+		{
+			continue;
+		}
+
+		Snake->SetOtherSnakes(AllSnakes);
+		Snake->SetCanHitOtherSnakes(bBattle);
+	}
+}
+
+
+void ASnakeGameMode::EndRun()
+{
+	if (ASnakeGameState* GS = GetSnakeGameState())
+	{
+		GS->SetSnakeGameState(ESnakeGameState::Outro);
+	}
+
+	ShowOutroForAllPlayers();
 }

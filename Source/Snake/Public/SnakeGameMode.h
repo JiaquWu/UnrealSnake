@@ -84,12 +84,24 @@ public:
 	
 	int32 GetRequiredFoodCount() const;
 	
+	void ResolveBattleStageTimeExpired();
+	void EndBattleWithWinner(int32 WinnerPlayerIndex);
+	void EndBattleDraw();
+	void ShowOutroForAllPlayers();
+	
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Rules")
 	ESnakeMode SnakeMode = ESnakeMode::Single;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Stage")
 	TArray<FSnakeStageConfig> Stages;
 
+	UPROPERTY()
+	TArray<int32> PlayerStageScores;
+
+	UPROPERTY()
+	TArray<int32> PlayerTotalScores;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Stage")
 	int32 CurrentStageIndex = 0;
 
@@ -127,6 +139,7 @@ private:
 	void EnsureLocalPlayers();
 	void SpawnAllSnakes();
 	void SpawnSnakeForPlayer(int32 PlayerIndex);
+	void ConfigureSnakeInteractions();
 	void CacheGridManager();
 	//void SpawnSnake();
 	void SpawnFoods();
@@ -137,13 +150,14 @@ private:
 	void AdvanceToNextStage();
 	void HandleStageTimeExpired();
 	bool HasMetStageRequirement() const;
+	void EndRun();
 	const FSnakeStageConfig* GetCurrentStageConfig() const;
 	
 	UFUNCTION()
 	void HandleFoodConsumed(int32 PlayerIndex, int32 ScoreValue, AFoodActor* ConsumedFood);
 	
 	UFUNCTION()
-	void HandleSnakeDeath();
+	void HandleSnakeDeath(int32 DeadPlayerIndex);
 	
 	ASnakeGameState* GetSnakeGameState() const;
 	

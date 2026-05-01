@@ -38,3 +38,11 @@ void ASnakeGameState::SetSnakeGameState(ESnakeGameState NewState)
 	GameState = NewState;
 	OnGameStateChanged.Broadcast(GameState);
 }
+
+void ASnakeGameState::SetBattleScores(int32 NewPlayer0Score, int32 NewPlayer1Score)
+{
+	Player0Score = NewPlayer0Score;
+	Player1Score = NewPlayer1Score;
+
+	OnBattleScoresChanged.Broadcast(Player0Score, Player1Score);
+}

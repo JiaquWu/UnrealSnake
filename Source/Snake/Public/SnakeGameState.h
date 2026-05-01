@@ -19,6 +19,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnStageChanged, int32, NewStageInd
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTimerChanged, float, RemainingTime);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSnakeGameStateChanged, ESnakeGameState, NewState);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+	FOnBattleScoresChanged,
+	int32, Player0Score,
+	int32, Player1Score
+);
 /**
  * 
  */
@@ -54,6 +59,17 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnSnakeGameStateChanged OnGameStateChanged;
+	
+	UPROPERTY(BlueprintReadOnly)
+	int32 Player0Score = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 Player1Score = 0;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnBattleScoresChanged OnBattleScoresChanged;
+
+	void SetBattleScores(int32 NewPlayer0Score, int32 NewPlayer1Score);
 
 	void SetScore(int32 NewScore);
 	void SetStage(int32 NewStageIndex, int32 NewRequirementScore);

@@ -15,7 +15,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 	AFoodActor*, FoodActor
 );
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSnakeDied);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSnakeDied, int32, PlayerIndex);
 
 class UInputMappingContext;
 class UStaticMeshComponent;
@@ -225,7 +225,13 @@ private:
 
 	FIntVector DirectionToGridOffset(ESnakeDirection CurrentDirection) const;
 	
-	
+	UPROPERTY()
+	TArray<TObjectPtr<AABoxRoverPawn>> OtherSnakes;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Rules", meta=(AllowPrivateAccess="true"))
+	bool bCanHitOtherSnakes = false;
+
+	bool WouldHitOtherSnake(const FIntVector& NextCell) const;
 	
 public:	
 	// Called every frame
@@ -242,4 +248,8 @@ public:
 	
 	void SetPlayerIndex(int32 NewPlayerIndex);
 	int32 GetPlayerIndex() const;
+	
+	void SetOtherSnakes(const TArray<AABoxRoverPawn*>& NewOtherSnakes);
+	void SetCanHitOtherSnakes(bool bCanHit);
+	
 };
