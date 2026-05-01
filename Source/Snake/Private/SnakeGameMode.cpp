@@ -143,7 +143,9 @@ void ASnakeGameMode::EnsureLocalPlayers()
 	const int32 RequiredPlayerCount = GetRequiredPlayerCount();
 
 	UE_LOG(LogTemp, Warning, TEXT("EnsureLocalPlayers RequiredPlayerCount=%d"), RequiredPlayerCount);
-
+	
+	RemoveExtraLocalPlayers(RequiredPlayerCount);
+	
 	for (int32 PlayerIndex = 1; PlayerIndex < RequiredPlayerCount; PlayerIndex++)
 	{
 		APlayerController* ExistingPC = UGameplayStatics::GetPlayerController(this, PlayerIndex);
@@ -702,6 +704,7 @@ FString ASnakeGameMode::GetCurrentModeOption() const
 
 void ASnakeGameMode::ReturnToMainMenu()
 {
+	RemoveExtraLocalPlayers(1);
 	UGameplayStatics::OpenLevel(this, FName(TEXT("MainMenuMap")));
 }
 
@@ -843,4 +846,22 @@ bool ASnakeGameMode::ShouldUseAIForPlayer(int32 PlayerIndex) const
 	return PlayerIndex == 1
 		&& SnakeMode != ESnakeMode::Single
 		&& SecondPlayerControlMode == ESecondPlayerControlMode::AI;
+}
+
+void ASnakeGameMode::RemoveExtraLocalPlayers(int32 DesiredPlayerCount)
+{
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		for (int32 i = GI->GetLocalPlayers().Num() - 1; i >= DesiredPlayerCount; --i)
+		{
+			if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, i))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Removing extra local player index %d: %s"),
+					i,
+					*GetNameSafe(PC));
+
+				UGameplayStatics::RemovePlayer(PC, true);
+			}
+		}
+	}
 }

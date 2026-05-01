@@ -177,5 +177,5 @@ private:
 	
 	ASnakeGameState* GetSnakeGameState() const;
 	
-	
+	void RemoveExtraLocalPlayers(int32 DesiredPlayerCount);
 };
